@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#FF9F45">
+<title>Давай Меняться — обмен детскими игрушками</title>
+
+<!-- PWA: устанавливается на телефон как приложение -->
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icons/favicon-96.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Меняться">
+
+<!-- Карта: Leaflet + OpenStreetMap (бесплатно, без ключа) -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+
+<!-- Шрифты с поддержкой кириллицы: Unbounded (дисплейный) + Nunito (текст) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Nunito:ital,wght@0,400;0,600;0,700;0,800;1,600&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  /* Радужная ладонь — фирменная палитра */
+  --c-red:#FF5D73;
+  --c-orange:#FF9F45;
+  --c-yellow:#FFD23F;
+  --c-green:#3DD68C;
+  --c-blue:#4CC2FF;
+  --c-purple:#A06CFF;
+
+  --bg:#FFF8EF;
+  --bg-soft:#FFFBF6;
+  --card:#FFFFFF;
+  --ink:#2B2540;
+  --ink-soft:#7A7290;
+  --line:#F0E7DA;
+  --shadow:0 10px 30px rgba(120,90,40,.10);
+  --shadow-lg:0 22px 50px rgba(120,90,40,.18);
+  --radius:22px;
+  --maxw:480px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  font-family:'Nunito',sans-serif;
+  background:var(--bg);
+  color:var(--ink);
+  overscroll-behavior-y:none;
+}
+.app{
+  max-width:var(--maxw);
+  margin:0 auto;
+  min-height:100vh;
+  min-height:100dvh;
+  background:
+    radial-gradient(120% 60% at 110% -10%, rgba(160,108,255,.10), transparent 60%),
+    radial-gradient(120% 60% at -20% 0%, rgba(76,194,255,.12), transparent 55%),
+    var(--bg);
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  box-shadow:0 0 60px rgba(120,90,40,.08);
+}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+h1,h2,h3{font-family:'Unbounded',sans-serif;margin:0;line-height:1.1}
+input,select,textarea{font-family:inherit;font-size:16px}
+a{color:var(--c-blue);text-decoration:none}
+::selection{background:var(--c-yellow)}
+
+/* ===== Логотип-ладонь ===== */
+.hand{display:block}
+.brand{display:flex;align-items:center;gap:10px}
+.brand .name{font-family:'Unbounded';font-weight:800;font-size:18px;letter-spacing:-.5px;line-height:1}
+.brand .name b{display:block;font-weight:500;font-size:10.5px;letter-spacing:.5px;color:var(--ink-soft);text-transform:uppercase}
+
+/* ===== Заголовок ===== */
+.appbar{
+  position:sticky;top:0;z-index:40;
+  display:flex;align-items:center;justify-content:space-between;
+  gap:10px;padding:14px 16px 12px;
+  background:rgba(255,248,239,.86);
+  backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--line);
+}
+.loc-chip{
+  display:inline-flex;align-items:center;gap:6px;
+  background:var(--card);border:1.5px solid var(--line);
+  padding:7px 12px;border-radius:999px;font-weight:700;font-size:13px;
+  box-shadow:var(--shadow);max-width:48vw;
+}
+.loc-chip .pin{font-size:14px}
+.loc-chip span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ===== Основная область ===== */
+main{flex:1;min-height:0;padding-bottom:86px}
+.view{display:none;animation:fade .35s ease both}
+.view.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.pad{padding:16px}
+.section-title{font-size:20px;font-weight:800;margin:6px 2px 12px;letter-spacing:-.5px}
+.muted{color:var(--ink-soft)}
+
+/* ===== Чипы категорий/фильтров ===== */
+.chips{display:flex;gap:9px;overflow-x:auto;padding:4px 16px 12px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{
+  flex:0 0 auto;display:inline-flex;align-items:center;gap:7px;
+  background:var(--card);border:1.5px solid var(--line);
+  padding:9px 14px;border-radius:999px;font-weight:700;font-size:13.5px;
+  white-space:nowrap;transition:.18s;color:var(--ink);
+}
+.chip .e{font-size:15px}
+.chip[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink);transform:translateY(-1px)}
+.chip.special[aria-pressed="true"]{background:var(--c-purple);border-color:var(--c-purple)}
+
+/* ===== Сетка лотов (каталог) ===== */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:4px 16px 16px}
+.lot{
+  background:var(--card);border-radius:var(--radius);overflow:hidden;
+  box-shadow:var(--shadow);border:1px solid var(--line);
+  display:flex;flex-direction:column;cursor:pointer;transition:transform .15s, box-shadow .2s;
+}
+.lot:active{transform:scale(.98)}
+.thumb{aspect-ratio:1/1;display:grid;place-items:center;font-size:62px;position:relative}
+.thumb .badges{position:absolute;left:8px;top:8px;display:flex;gap:5px;flex-wrap:wrap;max-width:88%}
+.lot-body{padding:10px 11px 12px}
+.lot-title{font-weight:800;font-size:14px;line-height:1.2;margin-bottom:5px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:34px}
+.lot-meta{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ink-soft);font-weight:700}
+.lot-owner{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:12px;font-weight:700}
+.ava{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:13px;background:var(--bg);border:1.5px solid var(--line)}
+
+.badge{font-size:10.5px;font-weight:800;padding:4px 8px;border-radius:999px;color:#fff;letter-spacing:.2px;
+  box-shadow:0 3px 8px rgba(0,0,0,.12)}
+.b-exchange{background:var(--c-blue)}
+.b-gift{background:var(--c-green)}
+.b-rent{background:var(--c-purple)}
+.b-box{background:var(--c-orange)}
+.b-costume{background:var(--c-red)}
+.b-dist{background:rgba(43,37,64,.78)}
+
+/* ===== Лента-тиндер ===== */
+.deck-wrap{padding:8px 16px 0;display:flex;flex-direction:column;align-items:center}
+.deck-hint{font-weight:700;color:var(--ink-soft);font-size:13px;margin:2px 0 12px;text-align:center}
+.deck{position:relative;width:100%;max-width:360px;height:62vh;max-height:560px}
+.swipe-card{
+  position:absolute;inset:0;background:var(--card);border-radius:28px;overflow:hidden;
+  box-shadow:var(--shadow-lg);border:1px solid var(--line);
+  display:flex;flex-direction:column;user-select:none;touch-action:pan-y;will-change:transform;
+}
+.swipe-card .pic{flex:1;display:grid;place-items:center;font-size:120px;position:relative;min-height:0}
+.swipe-card .pic .badges{position:absolute;left:14px;top:14px;display:flex;gap:6px;flex-wrap:wrap}
+.swipe-card .info{padding:14px 18px 18px;background:linear-gradient(180deg,transparent, rgba(255,255,255,.0)), var(--card)}
+.swipe-card .info h3{font-size:19px;font-weight:800;letter-spacing:-.4px}
+.swipe-card .info .row{display:flex;align-items:center;gap:8px;color:var(--ink-soft);font-weight:700;font-size:13px;margin-top:7px;flex-wrap:wrap}
+.swipe-card .want{margin-top:10px;background:var(--bg);border:1.5px dashed var(--c-orange);border-radius:14px;padding:9px 12px;font-size:13px;font-weight:700}
+.swipe-card .want b{color:var(--c-orange)}
+.stamp{position:absolute;top:26px;font-family:'Unbounded';font-weight:800;font-size:30px;
+  padding:6px 16px;border-radius:14px;border:4px solid;opacity:0;transform:rotate(-14deg);text-transform:uppercase;letter-spacing:1px}
+.stamp.like{left:18px;color:var(--c-green);border-color:var(--c-green)}
+.stamp.nope{right:18px;color:var(--c-red);border-color:var(--c-red);transform:rotate(14deg)}
+
+.deck-actions{display:flex;justify-content:center;gap:18px;margin:18px 0 6px}
+.fab{width:62px;height:62px;border-radius:50%;background:var(--card);box-shadow:var(--shadow-lg);
+  display:grid;place-items:center;font-size:26px;border:1px solid var(--line);transition:transform .12s}
+.fab:active{transform:scale(.9)}
+.fab.big{width:72px;height:72px;font-size:30px}
+.fab.nope{color:var(--c-red)}
+.fab.like{color:var(--c-green)}
+.fab.info{color:var(--c-blue);font-size:22px}
+.fab.star{color:var(--c-yellow)}
+.deck-empty{text-align:center;padding:50px 24px;color:var(--ink-soft)}
+.deck-empty .big{font-size:64px;margin-bottom:12px}
+
+/* ===== Карта ===== */
+#map{width:100%;height:calc(100dvh - 220px);min-height:340px;border-radius:0}
+.map-toggle{display:flex;gap:8px;padding:10px 16px 0}
+.seg{flex:1;background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:10px;font-weight:800;font-size:13px;transition:.15s}
+.seg[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.leaflet-popup-content{font-family:'Nunito';margin:12px 14px}
+.pop-t{font-weight:800;font-size:14px}
+.pop-m{color:var(--ink-soft);font-size:12px;font-weight:700;margin-top:2px}
+.pop-b{margin-top:8px;background:var(--ink);color:#fff;border-radius:10px;padding:7px 12px;font-weight:800;font-size:12px;width:100%}
+
+/* ===== Карточка деталей / модалки ===== */
+.sheet-bg{position:fixed;inset:0;z-index:60;background:rgba(43,37,64,.5);backdrop-filter:blur(3px);
+  opacity:0;pointer-events:none;transition:.25s;display:flex;align-items:flex-end;justify-content:center}
+.sheet-bg.open{opacity:1;pointer-events:auto}
+.sheet{width:100%;max-width:var(--maxw);max-height:92dvh;overflow-y:auto;background:var(--bg-soft);
+  border-radius:28px 28px 0 0;transform:translateY(100%);transition:transform .3s cubic-bezier(.2,.9,.3,1);
+  box-shadow:var(--shadow-lg);-webkit-overflow-scrolling:touch}
+.sheet-bg.open .sheet{transform:none}
+.grab{width:42px;height:5px;border-radius:3px;background:var(--line);margin:10px auto 4px}
+.detail-pic{aspect-ratio:4/3;display:grid;place-items:center;font-size:140px;position:relative;margin:0 14px;border-radius:22px}
+.detail-pic .badges{position:absolute;left:12px;top:12px;display:flex;gap:6px;flex-wrap:wrap}
+.detail-close{position:absolute;right:22px;top:18px;z-index:2;background:rgba(255,255,255,.9);
+  width:38px;height:38px;border-radius:50%;font-size:20px;box-shadow:var(--shadow);display:grid;place-items:center}
+.detail-body{padding:16px 18px 24px}
+.detail-body h2{font-size:22px;letter-spacing:-.5px}
+.value-tag{display:inline-flex;align-items:center;gap:6px;background:var(--bg);border:1.5px solid var(--line);
+  border-radius:999px;padding:6px 12px;font-weight:800;font-size:13px;margin-top:10px}
+.owner-row{display:flex;align-items:center;gap:11px;margin:16px 0;padding:13px;background:var(--card);
+  border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow)}
+.owner-row .ava{width:46px;height:46px;font-size:24px}
+.stars{color:var(--c-yellow);font-size:14px;letter-spacing:1px}
+.want-box{background:var(--bg);border:1.5px dashed var(--c-orange);border-radius:16px;padding:13px 15px;margin:8px 0 16px;font-weight:700;font-size:14px}
+.want-box b{color:var(--c-orange)}
+.review{padding:13px;background:var(--card);border:1px solid var(--line);border-radius:16px;margin-bottom:10px}
+.review .top{display:flex;align-items:center;gap:8px;font-weight:800;font-size:13px;margin-bottom:5px}
+.review p{margin:0;font-size:13.5px;color:var(--ink)}
+
+.btn{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;
+  background:var(--ink);color:#fff;font-weight:800;font-size:16px;padding:16px;border-radius:18px;
+  box-shadow:var(--shadow);transition:transform .12s}
+.btn:active{transform:scale(.98)}
+.btn.accent{background:linear-gradient(135deg,var(--c-orange),var(--c-red))}
+.btn.green{background:linear-gradient(135deg,var(--c-green),#27b674)}
+.btn.ghost{background:var(--card);color:var(--ink);border:1.5px solid var(--line);box-shadow:none}
+
+/* ===== Предложить равнозначный обмен ===== */
+.match-note{display:flex;gap:10px;align-items:flex-start;background:#EAF7FF;border:1.5px solid #BEE6FF;
+  border-radius:16px;padding:12px 14px;font-size:13px;font-weight:700;margin:6px 0 14px;color:#0d6ea8}
+.match-note .e{font-size:20px}
+.my-lot{display:flex;align-items:center;gap:12px;padding:11px;border:2px solid var(--line);border-radius:16px;margin-bottom:10px;background:var(--card);transition:.15s}
+.my-lot[aria-pressed="true"]{border-color:var(--c-green);background:#EFFBF4}
+.my-lot .mini{width:48px;height:48px;border-radius:12px;display:grid;place-items:center;font-size:26px;flex:0 0 auto}
+.my-lot .t{font-weight:800;font-size:14px}
+.my-lot .v{font-size:12px;color:var(--ink-soft);font-weight:700}
+.my-lot .fit{margin-left:auto;font-size:11px;font-weight:800;padding:4px 9px;border-radius:999px}
+.fit-ok{background:#E4F8EE;color:#1a9d5f}
+.fit-low{background:#FFF1E0;color:#c47a16}
+
+/* ===== Создание лота ===== */
+.field{margin-bottom:16px}
+.field label{display:block;font-weight:800;font-size:13.5px;margin-bottom:7px}
+.field input,.field select,.field textarea{
+  width:100%;padding:14px;border:1.5px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);outline:none;transition:.15s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--c-orange);box-shadow:0 0 0 4px rgba(255,159,69,.15)}
+.field textarea{min-height:90px;resize:vertical}
+.toggle-2{display:flex;gap:10px;margin-bottom:18px}
+.toggle-2 button{flex:1;padding:14px 10px;border-radius:16px;border:2px solid var(--line);background:var(--card);font-weight:800;font-size:14px;line-height:1.2}
+.toggle-2 button[aria-pressed="true"]{border-color:var(--c-orange);background:#FFF3E6}
+.toggle-2 .sub{display:block;font-weight:600;font-size:11px;color:var(--ink-soft);margin-top:3px}
+.emoji-pick{display:flex;gap:8px;flex-wrap:wrap}
+.emoji-pick button{width:46px;height:46px;border-radius:12px;border:2px solid var(--line);background:var(--card);font-size:24px}
+.emoji-pick button[aria-pressed="true"]{border-color:var(--c-orange);background:#FFF3E6}
+.mode-pills{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.mode-pill{padding:10px 14px;border-radius:999px;border:2px solid var(--line);background:var(--card);font-weight:800;font-size:13px}
+.mode-pill[aria-pressed="true"]{border-color:var(--c-green);background:#EFFBF4}
+
+/* ===== Профиль ===== */
+.profile-head{text-align:center;padding:22px 16px 8px}
+.profile-head .ava{width:88px;height:88px;font-size:46px;margin:0 auto 12px;box-shadow:var(--shadow)}
+.stat-row{display:flex;gap:12px;padding:8px 16px 18px}
+.stat{flex:1;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px 8px;text-align:center;box-shadow:var(--shadow)}
+.stat b{display:block;font-family:'Unbounded';font-size:22px}
+.stat span{font-size:11.5px;color:var(--ink-soft);font-weight:700}
+.menu-list{padding:4px 16px}
+.menu-item{display:flex;align-items:center;gap:13px;padding:15px 16px;background:var(--card);border:1px solid var(--line);
+  border-radius:16px;margin-bottom:10px;font-weight:800;font-size:14.5px;box-shadow:var(--shadow)}
+.menu-item .e{font-size:20px}
+.menu-item .chev{margin-left:auto;color:var(--ink-soft)}
+.kid-card{display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#FFF3E6,#FDEFFF);
+  border:1px solid var(--line);border-radius:18px;padding:14px;margin:0 16px 14px;box-shadow:var(--shadow)}
+.kid-card .e{font-size:34px}
+
+/* ===== Правила / О проекте ===== */
+.prose{padding:6px 18px 24px;font-size:15px;line-height:1.6}
+.prose h2{font-size:21px;margin:18px 0 10px;letter-spacing:-.5px}
+.rule{display:flex;gap:12px;align-items:flex-start;background:var(--card);border:1px solid var(--line);
+  border-radius:16px;padding:13px 14px;margin-bottom:11px;box-shadow:var(--shadow)}
+.rule .e{font-size:24px;flex:0 0 auto}
+.rule .t{font-weight:800;font-size:14.5px;margin-bottom:3px}
+.rule .d{font-size:13px;color:var(--ink-soft);font-weight:600}
+.rule.ban{background:#FFF1F3;border-color:#FFD7DE}
+.rule.ban .t{color:var(--c-red)}
+.promo{background:linear-gradient(135deg,var(--c-purple),var(--c-blue));color:#fff;border-radius:22px;
+  padding:20px;margin:16px 0;box-shadow:var(--shadow-lg)}
+.promo h2{color:#fff;font-size:20px;margin:0 0 8px}
+.promo p{margin:0;font-weight:600;opacity:.95;font-size:14px;line-height:1.55}
+.howto{counter-reset:s;padding:0}
+.howto .step{display:flex;gap:14px;align-items:flex-start;margin-bottom:14px}
+.howto .num{counter-increment:s;flex:0 0 auto;width:34px;height:34px;border-radius:50%;
+  background:var(--c-orange);color:#fff;font-family:'Unbounded';font-weight:800;display:grid;place-items:center}
+.howto .num::before{content:counter(s)}
+.howto .st{font-weight:800;font-size:14.5px;margin-bottom:2px}
+.howto .sd{font-size:13px;color:var(--ink-soft);font-weight:600}
+
+/* ===== Нижняя навигация ===== */
+.tabbar{
+  position:fixed;left:0;right:0;bottom:0;z-index:50;
+  max-width:var(--maxw);margin:0 auto;
+  display:flex;align-items:center;justify-content:space-around;
+  background:rgba(255,255,255,.92);backdrop-filter:blur(14px);
+  border-top:1px solid var(--line);padding:8px 6px calc(8px + env(safe-area-inset-bottom));
+  box-shadow:0 -8px 24px rgba(120,90,40,.06);
+}
+.tab{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 10px;border-radius:14px;
+  color:var(--ink-soft);font-weight:800;font-size:10.5px;transition:.15s;min-width:54px}
+.tab .ic{font-size:22px;transition:transform .15s}
+.tab[aria-pressed="true"]{color:var(--ink)}
+.tab[aria-pressed="true"] .ic{transform:translateY(-2px) scale(1.12)}
+.tab.add{color:#fff}
+.tab.add .ic{background:linear-gradient(135deg,var(--c-orange),var(--c-red));width:50px;height:50px;border-radius:18px;
+  display:grid;place-items:center;color:#fff;box-shadow:0 8px 18px rgba(255,93,115,.4);margin-top:-18px;font-size:28px}
+
+/* ===== Онбординг ===== */
+.onb{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;flex-direction:column;
+  max-width:var(--maxw);margin:0 auto;overflow-y:auto}
+.onb-hero{padding:34px 24px 18px;text-align:center;
+  background:radial-gradient(120% 80% at 50% -10%, rgba(255,159,69,.18), transparent 60%)}
+.onb-hero .hand{margin:0 auto 14px}
+.onb-hero h1{font-size:30px;letter-spacing:-1px;margin-bottom:6px}
+.onb-hero h1 .sw1{color:var(--c-red)}.onb-hero h1 .sw2{color:var(--c-orange)}.onb-hero h1 .sw3{color:var(--c-green)}.onb-hero h1 .sw4{color:var(--c-blue)}
+.onb-hero p{color:var(--ink-soft);font-weight:700;font-size:14px;max-width:300px;margin:0 auto}
+.onb-form{padding:8px 22px 30px;flex:1}
+.req{color:var(--c-red)}
+.geo-btn{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;background:var(--card);
+  border:1.5px dashed var(--c-blue);color:#1f8fcf;font-weight:800;padding:13px;border-radius:14px;margin-bottom:10px}
+.gender-pick,.cat-row{display:flex;gap:10px}
+.gender-pick button{flex:1;padding:14px;border-radius:14px;border:2px solid var(--line);background:var(--card);font-weight:800;font-size:14px}
+.gender-pick button[aria-pressed="true"]{border-color:var(--c-orange);background:#FFF3E6}
+.err{color:var(--c-red);font-size:12.5px;font-weight:700;margin-top:6px;display:none}
+.err.show{display:block}
+
+/* Тост */
+.toast{position:fixed;left:50%;bottom:104px;transform:translateX(-50%) translateY(20px);
+  background:var(--ink);color:#fff;font-weight:800;font-size:13.5px;padding:12px 18px;border-radius:14px;
+  box-shadow:var(--shadow-lg);z-index:80;opacity:0;pointer-events:none;transition:.3s;max-width:88%;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+.empty{text-align:center;padding:60px 30px;color:var(--ink-soft)}
+.empty .big{font-size:56px;margin-bottom:10px}
+.spacer{height:14px}
+</style>
+</head>
+<body>
+
+<!-- ================= ОНБОРДИНГ ================= -->
+<div class="onb" id="onb">
+  <div class="onb-hero">
+    <div id="onbHand"></div>
+    <h1>Давай <span class="sw1">М</span><span class="sw2">е</span><span class="sw3">ня</span><span class="sw4">ться</span></h1>
+    <p>Обмен и дарение детских игрушек. Без продаж — только меняемся 💛</p>
+  </div>
+  <div class="onb-form">
+    <div class="field">
+      <label>Как вас зовут <span class="req">*</span></label>
+      <input id="onbName" placeholder="Например, Андрей" autocomplete="name">
+      <div class="err" id="errName">Введите имя</div>
+    </div>
+
+    <div class="field">
+      <label>Адрес локации <span class="req">*</span></label>
+      <button class="geo-btn" id="geoBtn">📍 Определить автоматически</button>
+      <input id="onbAddr" placeholder="Город, район или адрес">
+      <div class="muted" style="font-size:12px;margin-top:6px;font-weight:700">Нужен, чтобы показывать обмены рядом с вами на карте</div>
+      <div class="err" id="errAddr">Укажите локацию — это обязательно</div>
+    </div>
+
+    <div class="field">
+      <label>Ребёнку лет <span class="req">*</span></label>
+      <select id="onbAge">
+        <option value="">Выберите возраст</option>
+        <option value="0">0–1 год</option>
+        <option value="2">1–3 года</option>
+        <option value="4">3–5 лет</option>
+        <option value="6">5–7 лет</option>
+        <option value="8">7–10 лет</option>
+        <option value="11">10–14 лет</option>
+      </select>
+      <div class="err" id="errAge">Выберите возраст ребёнка</div>
+    </div>
+
+    <div class="field">
+      <label>Пол ребёнка <span class="req">*</span></label>
+      <div class="gender-pick" id="onbGender">
+        <button type="button" data-g="boy">👦 Мальчик</button>
+        <button type="button" data-g="girl">👧 Девочка</button>
+        <button type="button" data-g="any">🧒 Любой</button>
+      </div>
+      <div class="err" id="errGender">Выберите пол</div>
+    </div>
+
+    <button class="btn accent" id="onbSubmit" style="margin-top:6px">Начать меняться →</button>
+    <div class="muted" style="text-align:center;font-size:11.5px;margin-top:12px;font-weight:700">
+      Регистрируясь, вы соглашаетесь с правилами: продажа запрещена, мелкие собирательные игрушки и LEGO — нельзя.
+    </div>
+  </div>
+</div>
+
+<!-- ================= ПРИЛОЖЕНИЕ ================= -->
+<div class="app" id="app" style="display:none">
+  <header class="appbar">
+    <div class="brand">
+      <div id="barHand"></div>
+      <div class="name">Давай Меняться<b>обмен · дар · аренда</b></div>
+    </div>
+    <button class="loc-chip" id="locChip" title="Сменить локацию">
+      <span class="pin">📍</span><span id="locText">Локация</span>
+    </button>
+  </header>
+
+  <main>
+    <!-- ЛЕНТА (Тиндер) -->
+    <section class="view active" id="view-feed">
+      <div class="deck-wrap">
+        <div class="deck-hint">🔥 Сначала — обмены рядом с вами. Свайп вправо «нравится», влево «пропустить»</div>
+        <div class="deck" id="deck"></div>
+        <div class="deck-actions" id="deckActions">
+          <button class="fab nope" id="actNope" title="Пропустить">✕</button>
+          <button class="fab info" id="actInfo" title="Подробнее">ℹ️</button>
+          <button class="fab like big" id="actLike" title="Хочу обмен">♥</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- КАТАЛОГ -->
+    <section class="view" id="view-catalog">
+      <div class="pad" style="padding-bottom:0">
+        <div class="section-title">Каталог обменов</div>
+      </div>
+      <div class="chips" id="catChips"></div>
+      <div class="chips" id="specialChips" style="padding-top:0"></div>
+      <div class="chips" id="demoChips" style="padding-top:0"></div>
+      <div id="grid" class="grid"></div>
+      <div id="gridEmpty" class="empty" style="display:none">
+        <div class="big">🔍</div>
+        <div style="font-weight:800;color:var(--ink)">Ничего не нашлось</div>
+        <div>Попробуйте сбросить фильтры</div>
+      </div>
+    </section>
+
+    <!-- КАРТА -->
+    <section class="view" id="view-map">
+      <div class="pad" style="padding-bottom:6px">
+        <div class="section-title">Карта рядом</div>
+      </div>
+      <div class="map-toggle">
+        <button class="seg" id="segToys" aria-pressed="true">🧸 Карта игрушек</button>
+        <button class="seg" id="segWish" aria-pressed="false">🙋 Карта предложений</button>
+      </div>
+      <div style="padding:10px 16px 4px" class="muted" id="mapSub" style="font-weight:700"></div>
+      <div id="map"></div>
+    </section>
+
+    <!-- СОЗДАТЬ -->
+    <section class="view" id="view-create">
+      <div class="pad">
+        <div class="section-title" id="createTitle">Новый лот</div>
+        <div class="toggle-2" id="postType">
+          <button type="button" data-t="offer" aria-pressed="true">📦 Предлагаю обмен<span class="sub">выставить игрушку</span></button>
+          <button type="button" data-t="wish" aria-pressed="false">🙋 Ищу / пожелание<span class="sub">хочу поиграть в…</span></button>
+        </div>
+
+        <div class="field">
+          <label id="lblTitle">Что предлагаете?</label>
+          <input id="cTitle" placeholder="Например, Деревянная железная дорога">
+        </div>
+
+        <div class="field">
+          <label>Картинка</label>
+          <div class="emoji-pick" id="cEmoji"></div>
+        </div>
+
+        <div class="field">
+          <label>Категория</label>
+          <select id="cCat"></select>
+        </div>
+
+        <div class="cat-row">
+          <div class="field" style="flex:1">
+            <label>Возраст</label>
+            <select id="cAge">
+              <option value="0">0–1 год</option>
+              <option value="2">1–3 года</option>
+              <option value="4" selected>3–5 лет</option>
+              <option value="6">5–7 лет</option>
+              <option value="8">7–10 лет</option>
+              <option value="11">10–14 лет</option>
+            </select>
+          </div>
+          <div class="field" style="flex:1">
+            <label>Пол</label>
+            <select id="cGender">
+              <option value="any">Любой</option>
+              <option value="boy">Мальчик</option>
+              <option value="girl">Девочка</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field" id="modeField">
+          <label>Условие</label>
+          <div class="mode-pills" id="cMode">
+            <button type="button" data-m="exchange" aria-pressed="true">🔄 Обмен</button>
+            <button type="button" data-m="gift" aria-pressed="false">🎁 Даром</button>
+            <button type="button" data-m="box" aria-pressed="false">📦 Коробка на месяц</button>
+            <button type="button" data-m="rent" aria-pressed="false">🚲 Аренда крупногабарит.</button>
+          </div>
+        </div>
+
+        <div class="field" id="valField">
+          <label>Примерная ценность (для равнозначного обмена), ₽</label>
+          <input id="cValue" type="number" inputmode="numeric" placeholder="1500" value="1500">
+        </div>
+
+        <div class="field">
+          <label id="lblWant">Что хотите взамен? <span class="muted">(необязательно)</span></label>
+          <textarea id="cWant" placeholder="Например: конструктор-крупные блоки или самокат. Можно «на ваше усмотрение»"></textarea>
+        </div>
+
+        <div class="field">
+          <label>Описание</label>
+          <textarea id="cDesc" placeholder="Состояние, что в комплекте, почему меняем…"></textarea>
+        </div>
+
+        <button class="btn green" id="cSubmit">Опубликовать лот</button>
+        <div class="spacer"></div>
+        <div class="muted" style="font-size:12px;font-weight:700;text-align:center">
+          ⚠️ Продажа запрещена. Мелкие собирательные игрушки и LEGO публиковать нельзя.
+        </div>
+        <div class="spacer"></div>
+      </div>
+    </section>
+
+    <!-- ХОЧУ / ПОЖЕЛАНИЯ -->
+    <section class="view" id="view-wishes">
+      <div class="pad" style="padding-bottom:0">
+        <div class="section-title">Пожелания · «Ищу поиграть»</div>
+        <div class="muted" style="font-weight:700;margin:-6px 2px 10px">Люди ищут конкретные игрушки и предлагают что-то взамен</div>
+      </div>
+      <div id="wishList" class="pad" style="padding-top:0"></div>
+    </section>
+
+    <!-- ПРОФИЛЬ -->
+    <section class="view" id="view-profile">
+      <div class="profile-head">
+        <div class="ava" id="pAva">🙂</div>
+        <h2 id="pName" style="font-size:22px">Андрей</h2>
+        <div class="stars" id="pStars">★★★★★ <span class="muted" style="font-size:12px;font-weight:700">4.9 · 12 отзывов</span></div>
+      </div>
+      <div class="kid-card">
+        <div class="e" id="pKidEmoji">🧒</div>
+        <div>
+          <div style="font-weight:800;font-size:14px" id="pKidLine">Ребёнку 3–5 лет</div>
+          <div class="muted" style="font-weight:700;font-size:13px" id="pLocLine">📍 Локация</div>
+        </div>
+      </div>
+      <div class="stat-row">
+        <div class="stat"><b id="stMy">0</b><span>Мои лоты</span></div>
+        <div class="stat"><b id="stLikes">0</b><span>Понравилось</span></div>
+        <div class="stat"><b>7</b><span>Обменов</span></div>
+      </div>
+      <div class="menu-list">
+        <div class="menu-item" data-go="myLots"><span class="e">📦</span> Мои лоты <span class="chev">›</span></div>
+        <div class="menu-item" data-go="likes"><span class="e">♥</span> Понравившиеся <span class="chev">›</span></div>
+        <div class="menu-item" data-nav="rules"><span class="e">📜</span> Правила обмена <span class="chev">›</span></div>
+        <div class="menu-item" data-nav="about"><span class="e">💡</span> О проекте <span class="chev">›</span></div>
+        <div class="menu-item" id="editLoc"><span class="e">📍</span> Сменить локацию <span class="chev">›</span></div>
+        <div class="menu-item" id="resetApp"><span class="e">🔄</span> Сбросить и пройти заново <span class="chev">›</span></div>
+      </div>
+      <div class="spacer"></div>
+    </section>
+
+    <!-- ПРАВИЛА -->
+    <section class="view" id="view-rules">
+      <div class="pad"><div class="section-title">📜 Правила обмена</div></div>
+      <div class="prose" style="padding-top:0">
+        <div class="rule"><div class="e">🔄</div><div><div class="t">Только обмен или в дар</div><div class="d">Продажа полностью запрещена. Никаких денег — меняемся игрушками или дарим.</div></div></div>
+        <div class="rule"><div class="e">⚖️</div><div><div class="t">Равнозначно по цене</div><div class="d">Предлагайте взамен игрушку примерно той же ценности — это честно для обеих сторон.</div></div></div>
+        <div class="rule ban"><div class="e">🚫</div><div><div class="t">Нельзя: мелкие собирательные игрушки</div><div class="d">Киндеры, фигурки из серий, мелкая россыпь — не размещаем.</div></div></div>
+        <div class="rule ban"><div class="e">🧱</div><div><div class="t">Нельзя: LEGO</div><div class="d">Конструкторы LEGO к обмену не принимаются (легко теряются детали).</div></div></div>
+        <div class="rule"><div class="e">📍</div><div><div class="t">Меняемся рядом</div><div class="d">Сначала показываем лоты рядом с вашей локацией — удобно встретиться.</div></div></div>
+        <div class="rule"><div class="e">⭐</div><div><div class="t">Отзывы после обмена</div><div class="d">Оставляйте отзыв — так в сообществе остаются надёжные люди.</div></div></div>
+
+        <h2>Как меняться</h2>
+        <div class="howto">
+          <div class="step"><div class="num"></div><div><div class="st">Выставьте лот</div><div class="sd">Сфотографируйте игрушку, выберите категорию, возраст и условие.</div></div></div>
+          <div class="step"><div class="num"></div><div><div class="st">Смотрите ленту рядом</div><div class="sd">Свайпайте лоты как в Тиндере — ближайшие первыми.</div></div></div>
+          <div class="step"><div class="num"></div><div><div class="st">Предложите обмен</div><div class="sd">Выберите свою игрушку равной ценности.</div></div></div>
+          <div class="step"><div class="num"></div><div><div class="st">Договоритесь и встретьтесь</div><div class="sd">Согласуйте место по карте рядом с домом.</div></div></div>
+          <div class="step"><div class="num"></div><div><div class="st">Оставьте отзыв</div><div class="sd">И меняйтесь снова — хоть каждую неделю!</div></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- О ПРОЕКТЕ -->
+    <section class="view" id="view-about">
+      <div class="pad"><div class="section-title">💡 О проекте</div></div>
+      <div class="prose" style="padding-top:0">
+        <p style="font-weight:700;font-size:16px">«Давай Меняться» помогает <b>экономить бюджет</b>, избавляет от <b>домашнего бардака игрушек</b> и учит детей <b>бережному потреблению</b>.</p>
+
+        <div class="promo">
+          <h2>🦒 Надоело за месяц?</h2>
+          <p>Огромные объёмные игрушки, которые надоедают через месяц, можно взять в <b>аренду</b>, а не покупать. Поиграли — вернули — взяли новое.</p>
+        </div>
+
+        <p>Каждый ребёнок хочет новую игрушку. А игрушки друзей детям часто интереснее, чем свои. Для ребёнка важны эмоции, которые даёт новая вещь.</p>
+        <p>А маме с папой важно сохранить бюджет — ведь зачем тратить деньги, когда все игрушки уже давно куплены? Ими просто нужно <b>меняться!</b></p>
+        <p style="background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;font-weight:700;box-shadow:var(--shadow)">
+          Друзья, не храните игрушки по ящикам и кладовкам. Меняйтесь каждую неделю или каждый день. Ваш ребёнок будет доволен, а вы — вдвойне 😊
+        </p>
+
+        <h2>Что внутри</h2>
+        <div class="rule"><div class="e">🔄</div><div><div class="t">Обмен и дар</div><div class="d">Никаких продаж — только меняемся или отдаём даром.</div></div></div>
+        <div class="rule"><div class="e">📦</div><div><div class="t">Коробка игрушек на месяц</div><div class="d">Обменяйтесь целой коробкой и обновите всё разом.</div></div></div>
+        <div class="rule"><div class="e">👗</div><div><div class="t">Костюмы и платья</div><div class="d">Карнавальные костюмы и нарядные платья — на один праздник жалко покупать.</div></div></div>
+        <div class="rule"><div class="e">🗺️</div><div><div class="t">Карта рядом</div><div class="d">Лоты и предложения на карте — меняйтесь с соседями.</div></div></div>
+        <div class="spacer"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- НИЖНЯЯ НАВИГАЦИЯ -->
+  <nav class="tabbar">
+    <button class="tab" data-nav="feed" aria-pressed="true"><span class="ic">🔥</span>Лента</button>
+    <button class="tab" data-nav="catalog"><span class="ic">🧸</span>Каталог</button>
+    <button class="tab add" data-nav="create"><span class="ic">＋</span><span style="color:var(--ink-soft)">Лот</span></button>
+    <button class="tab" data-nav="map"><span class="ic">🗺️</span>Карта</button>
+    <button class="tab" data-nav="profile"><span class="ic">🙂</span>Профиль</button>
+  </nav>
+</div>
+
+<!-- Шторка деталей лота -->
+<div class="sheet-bg" id="detailBg">
+  <div class="sheet" id="detailSheet"></div>
+</div>
+
+<!-- Шторка «предложить обмен» -->
+<div class="sheet-bg" id="proposeBg">
+  <div class="sheet" id="proposeSheet"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script>
+/* ============ Логотип-ладонь (SVG) ============ */
+function handSVG(size){
+  return `<svg class="hand" width="${size}" height="${size}" viewBox="0 0 100 100" aria-label="Давай меняться">
+    <rect x="18" y="40" width="9" height="27" rx="4.5" fill="#A06CFF" transform="rotate(-38 22 53)"/>
+    <rect x="30" y="45" width="44" height="44" rx="17" fill="#FFB36B"/>
+    <rect x="33" y="22" width="9" height="40" rx="4.5" fill="#FF5D73"/>
+    <rect x="45" y="15" width="9" height="47" rx="4.5" fill="#FFD23F"/>
+    <rect x="57" y="19" width="9" height="43" rx="4.5" fill="#3DD68C"/>
+    <rect x="68" y="27" width="8.5" height="35" rx="4.2" fill="#4CC2FF"/>
+  </svg>`;
+}
+document.getElementById('onbHand').innerHTML = handSVG(78);
+document.getElementById('barHand').innerHTML = handSVG(34);
+
+/* ============ Категории ============ */
+const CATS = [
+  {k:'all',   t:'Все категории', e:'🌈'},
+  {k:'toys',  t:'Игрушки',       e:'🧸'},
+  {k:'baby',  t:'Товары для малышей', e:'🍼'},
+  {k:'board', t:'Настольные игры',e:'🎲'},
+  {k:'sport', t:'Транспорт, спорт, отдых', e:'🚲'},
+  {k:'books', t:'Книжки',        e:'📚'},
+  {k:'craft', t:'Творчество',    e:'🎨'},
+  {k:'clothes',t:'Одежда',       e:'👕'},
+  {k:'misc',  t:'Всякая всячина',e:'🧩'},
+];
+const catName = k => (CATS.find(c=>c.k===k)||{}).t || 'Прочее';
+
+const MODES = {
+  exchange:{t:'Обмен', cls:'b-exchange', e:'🔄'},
+  gift:    {t:'Даром', cls:'b-gift',     e:'🎁'},
+  rent:    {t:'Аренда',cls:'b-rent',     e:'🚲'},
+  box:     {t:'Коробка/мес', cls:'b-box',e:'📦'},
+};
+
+const EMOJIS = ['🧸','🚗','🪀','🚂','🎨','📚','🧩','🎲','🏰','🦖','🪁','⚽','🚲','🛴','🎸','👗','🤖','🦄','🧶','🛼','🎯','🪆','🚁','🦕'];
+
+/* ============ Демо-данные лотов ============ */
+const PALETTES = [['#FFE3C2','#FFC9A3'],['#D9F2FF','#B6E4FF'],['#E7FBEF','#C5F2D8'],['#FBE5FF','#F0CCFF'],
+['#FFF3C2','#FFE39A'],['#FFE0E5','#FFC2CC'],['#E5E9FF','#CDD5FF'],['#E9FBFA','#C7F1EE']];
+
+let LOTS = [
+  {id:1,title:'Деревянная железная дорога',e:'🚂',cat:'toys',age:4,gender:'any',mode:'exchange',value:2200,
+   want:'Конструктор крупные блоки или гараж с машинками',desc:'Большой набор, 60 деталей, мост и тоннель. Сыну стало неинтересно.',d:0.4,
+   owner:{n:'Мария',a:'👩',r:4.9,rc:14},reviews:[{a:'Олег',s:5,t:'Обменялись быстро, всё на месте. Спасибо!'},{a:'Inna',s:5,t:'Очень приятная мама, дорога супер'}]},
+  {id:2,title:'Большой игрушечный гараж',e:'🏰',cat:'toys',age:4,gender:'boy',mode:'exchange',value:2500,
+   want:'Кукольный домик или набор доктора',desc:'4 этажа, лифт, шлагбаум. Машинки в комплекте.',d:0.7,
+   owner:{n:'Денис',a:'🧔',r:4.7,rc:9},reviews:[{a:'Катя',s:5,t:'Гараж огонь, дети в восторге'}]},
+  {id:3,title:'Костюм Эльзы (платье)',e:'👗',cat:'clothes',age:6,gender:'girl',mode:'exchange',value:1800,costume:true,
+   want:'Любой карнавальный костюм на рост 116',desc:'Надевали раз на утренник. Рост 110-116.',d:1.1,
+   owner:{n:'Алёна',a:'👱‍♀️',r:5.0,rc:21},reviews:[{a:'Vera',s:5,t:'Платье как новое, дочь счастлива'},{a:'Настя',s:5,t:'Спасибо за честный обмен'}]},
+  {id:4,title:'Коробка игрушек 2-3 года',e:'📦',cat:'toys',age:2,gender:'any',mode:'box',value:3000,
+   want:'Такую же коробку для возраста 3-4',desc:'Сортеры, пирамидки, музыкальные. Меняемся на месяц и возвращаем.',d:0.9,
+   owner:{n:'Ольга',a:'👩‍🦰',r:4.8,rc:17},reviews:[{a:'Лена',s:5,t:'Отличная идея с коробкой, ребёнок месяц был занят'}]},
+  {id:5,title:'Самокат трёхколёсный',e:'🛴',cat:'sport',age:4,gender:'any',mode:'exchange',value:2000,
+   want:'Беговел или ролики р.30-32',desc:'Светящиеся колёса, регулируется по высоте.',d:1.6,
+   owner:{n:'Pavel',a:'👨',r:4.6,rc:6},reviews:[]},
+  {id:6,title:'Большой батут (аренда)',e:'🦘',cat:'sport',age:6,gender:'any',mode:'rent',value:6000,
+   want:'',desc:'Габаритный, дома стоит без дела. Берите на праздник/лето в аренду.',d:2.2,
+   owner:{n:'Сергей',a:'🧔‍♂️',r:4.9,rc:11},reviews:[{a:'Дима',s:5,t:'Брали на день рождения — спасли праздник!'}]},
+  {id:7,title:'Набор Доктор',e:'🩺',cat:'toys',age:4,gender:'any',mode:'gift',value:0,
+   want:'',desc:'Отдаём даром, переросли. Чемоданчик + инструменты.',d:0.5,
+   owner:{n:'Юлия',a:'👩‍🦱',r:4.8,rc:8},reviews:[{a:'Marina',s:5,t:'Спасибо что отдали даром, добрые люди'}]},
+  {id:8,title:'Конструктор крупные блоки',e:'🧱',cat:'toys',age:2,gender:'any',mode:'exchange',value:1500,
+   want:'Сортер или каталка',desc:'Крупные, безопасные, 80 деталей. Не LEGO — большие блоки для малышей.',d:1.3,
+   owner:{n:'Игорь',a:'👨‍🦰',r:4.5,rc:5},reviews:[]},
+  {id:9,title:'Книги «Бином малыша» 6 шт',e:'📚',cat:'books',age:2,gender:'any',mode:'exchange',value:1200,
+   want:'Книжки-картонки или пазлы',desc:'Развивающие, твёрдые страницы, без потёртостей.',d:0.8,
+   owner:{n:'Нина',a:'👵',r:5.0,rc:19},reviews:[{a:'Olya',s:5,t:'Книги в идеале'}]},
+  {id:10,title:'Радиоуправляемая машинка',e:'🚗',cat:'toys',age:6,gender:'boy',mode:'exchange',value:2300,
+   want:'Трек hot wheels или вертолёт',desc:'Полный привод, аккумулятор держит. Пульт в комплекте.',d:1.9,
+   owner:{n:'Артём',a:'🧑',r:4.7,rc:7},reviews:[]},
+  {id:11,title:'Мольберт для рисования',e:'🎨',cat:'craft',age:4,gender:'any',mode:'exchange',value:1700,
+   want:'Кинетический песок или пластилин-набор',desc:'Двусторонний: мел + маркер. Складной.',d:2.4,
+   owner:{n:'Дарья',a:'👩‍🎨',r:4.9,rc:13},reviews:[{a:'Sveta',s:5,t:'Мольберт супер, дочка рисует целыми днями'}]},
+  {id:12,title:'Развивающий коврик',e:'🍼',cat:'baby',age:0,gender:'any',mode:'gift',value:0,
+   want:'',desc:'Отдаём даром. Дуги, погремушки, музыка. Постиран.',d:1.0,
+   owner:{n:'Кристина',a:'👩‍🍼',r:4.8,rc:10},reviews:[]},
+  {id:13,title:'Настолка «Дженга»',e:'🎲',cat:'board',age:6,gender:'any',mode:'exchange',value:900,
+   want:'Любую настолку для компании',desc:'Полный комплект брусочков, коробка целая.',d:0.6,
+   owner:{n:'Глеб',a:'👦',r:4.4,rc:4},reviews:[]},
+  {id:14,title:'Костюм Человека-паука',e:'🕷️',cat:'clothes',age:6,gender:'boy',mode:'exchange',value:1600,costume:true,
+   want:'Костюм динозавра или рыцаря, рост 122',desc:'Рост 116-122, маска в комплекте.',d:1.4,
+   owner:{n:'Роман',a:'👨‍🦲',r:4.6,rc:6},reviews:[]},
+];
+
+/* Пожелания «ищу поиграть» */
+let WISHES = [
+  {id:101,e:'🦖',title:'Ищу: большой динозавр T-Rex',want:'Взамен предложу: набор железной дороги, мольберт или книги',
+   age:6,gender:'boy',d:0.8,owner:{n:'Лиза',a:'👩'}},
+  {id:102,e:'🏰',title:'Ищу: кукольный домик',want:'Могу предложить много: коляску для кукол, кухню, набор посуды',
+   age:4,gender:'girl',d:1.2,owner:{n:'Аня',a:'👩‍🦰'}},
+  {id:103,e:'🚲',title:'Ищу: беговел на 2-3 года',want:'Взамен — самокат, каталка или конструктор крупные блоки',
+   age:2,gender:'any',d:0.5,owner:{n:'Тимур',a:'👨'}},
+  {id:104,e:'📦',title:'Ищу: коробку игрушек 5-7 лет на месяц',want:'Дам свою коробку: настолки, машинки, наборы для творчества',
+   age:6,gender:'any',d:1.7,owner:{n:'Вика',a:'👱‍♀️'}},
+];
+
+/* ============ Состояние ============ */
+const store = {
+  get user(){ try{return JSON.parse(localStorage.getItem('dm_user'))}catch(e){return null} },
+  set user(v){ localStorage.setItem('dm_user', JSON.stringify(v)) },
+  get mine(){ try{return JSON.parse(localStorage.getItem('dm_mine'))||[]}catch(e){return []} },
+  set mine(v){ localStorage.setItem('dm_mine', JSON.stringify(v)) },
+  get likes(){ try{return JSON.parse(localStorage.getItem('dm_likes'))||[]}catch(e){return []} },
+  set likes(v){ localStorage.setItem('dm_likes', JSON.stringify(v)) },
+};
+let user = store.user;
+LOTS = LOTS.concat(store.mine.filter(l=>l.type!=='wish'));
+WISHES = WISHES.concat(store.mine.filter(l=>l.type==='wish'));
+
+/* координаты вокруг центра (по локации пользователя) */
+const CITY_CENTERS = {
+  'Санкт-Петербург':[59.9386,30.3141],'Москва':[55.7539,37.6208],'Казань':[55.7963,49.1088],
+  'Екатеринбург':[56.8389,60.6057],'Новосибирск':[55.0302,82.9204],
+};
+function userCenter(){
+  if(user&&user.lat&&user.lng) return [user.lat,user.lng];
+  const c = user&&CITY_CENTERS[user.cityKey];
+  return c || CITY_CENTERS['Санкт-Петербург'];
+}
+/* раскидать лоты по расстоянию d (км) вокруг центра — детерминированно */
+function lotLatLng(lot){
+  const [clat,clng]=userCenter();
+  const ang=(lot.id*53)%360 * Math.PI/180;
+  const km=lot.d||1;
+  const dlat=(km/111)*Math.cos(ang);
+  const dlng=(km/(111*Math.cos(clat*Math.PI/180)))*Math.sin(ang);
+  return [clat+dlat, clng+dlng];
+}
+
+function palette(id){ return PALETTES[id % PALETTES.length]; }
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),2200); }
+
+function modeBadges(lot){
+  let b=`<span class="badge ${MODES[lot.mode].cls}">${MODES[lot.mode].e} ${MODES[lot.mode].t}</span>`;
+  if(lot.costume) b+=`<span class="badge b-costume">👗 Костюм</span>`;
+  return b;
+}
+function distText(d){ return d<1 ? Math.round(d*1000)+' м' : d.toFixed(1)+' км'; }
+function ageText(a){ return ({0:'0–1 г',2:'1–3 г',4:'3–5 л',6:'5–7 л',8:'7–10 л',11:'10–14 л'})[a]||a+'+'; }
+function genderE(g){ return g==='boy'?'👦':g==='girl'?'👧':'🧒'; }
+function stars(r){ const f=Math.round(r); return '★★★★★'.slice(0,f)+'☆☆☆☆☆'.slice(0,5-f); }
+
+/* ============ Навигация ============ */
+const views = ['feed','catalog','create','map','wishes','profile','rules','about'];
+function nav(v){
+  views.forEach(x=>{ const el=document.getElementById('view-'+x); if(el) el.classList.toggle('active', x===v); });
+  document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-pressed', t.dataset.nav===v));
+  window.scrollTo(0,0);
+  if(v==='map') setTimeout(initMap,60);
+  if(v==='feed') renderDeck();
+  if(v==='catalog') renderGrid();
+  if(v==='wishes') renderWishes();
+  if(v==='profile') renderProfile();
+  if(v==='create') syncCreate();
+}
+document.querySelectorAll('[data-nav]').forEach(b=>b.addEventListener('click',()=>nav(b.dataset.nav)));
+
+/* ============ ЛЕНТА (тиндер) ============ */
+let deckQueue=[];
+function feedLots(){
+  // только активные предложения, ближайшие первыми
+  return LOTS.filter(l=>l.mode!=='rent'||true).slice().sort((a,b)=>a.d-b.d);
+}
+function renderDeck(){
+  const deck=document.getElementById('deck');
+  if(!deckQueue.length) deckQueue = feedLots().map(l=>l.id);
+  deck.innerHTML='';
+  const visible = deckQueue.slice(0,3).reverse(); // последний в DOM = верхний
+  if(!visible.length){
+    document.getElementById('deckActions').style.visibility='hidden';
+    deck.innerHTML=`<div class="deck-empty"><div class="big">🎉</div><div style="font-weight:800;color:var(--ink)">Вы посмотрели все лоты рядом!</div><div>Загляните в каталог или на карту</div><br><button class="btn ghost" onclick="deckQueue=[];renderDeck()">Смотреть заново</button></div>`;
+    return;
+  }
+  document.getElementById('deckActions').style.visibility='visible';
+  visible.forEach((id,idx)=>{
+    const lot=LOTS.find(l=>l.id===id); if(!lot)return;
+    const [c1,c2]=palette(lot.id);
+    const top = idx===visible.length-1;
+    const card=document.createElement('div');
+    card.className='swipe-card';
+    card.dataset.id=id;
+    const scale = 1-(visible.length-1-idx)*0.04;
+    const ty = (visible.length-1-idx)*10;
+    card.style.transform=`scale(${scale}) translateY(${ty}px)`;
+    card.style.zIndex=idx;
+    card.innerHTML=`
+      <div class="pic" style="background:linear-gradient(160deg,${c1},${c2})">
+        <div class="badges">${modeBadges(lot)}<span class="badge b-dist">📍 ${distText(lot.d)}</span></div>
+        ${lot.e}
+        <div class="stamp like">Хочу</div><div class="stamp nope">Мимо</div>
+      </div>
+      <div class="info">
+        <h3>${lot.title}</h3>
+        <div class="row"><span>${CATS.find(c=>c.k===lot.cat)?.e||''} ${catName(lot.cat)}</span>·<span>${genderE(lot.gender)} ${ageText(lot.age)}</span>·<span>${lot.owner.a} ${lot.owner.n} ⭐${lot.owner.r}</span></div>
+        ${lot.want?`<div class="want"><b>Хочет взамен:</b> ${lot.want}</div>`:`<div class="want"><b>${lot.mode==='gift'?'Отдаёт даром 🎁':'Готов(а) к равнозначному обмену'}</b></div>`}
+      </div>`;
+    if(top) enableSwipe(card);
+    deck.appendChild(card);
+  });
+}
+function topCard(){ const cards=document.querySelectorAll('.swipe-card'); return cards[cards.length-1]; }
+function enableSwipe(card){
+  let sx=0,sy=0,dx=0,dy=0,drag=false;
+  const like=card.querySelector('.stamp.like'), nope=card.querySelector('.stamp.nope');
+  const down=e=>{drag=true; const p=e.touches?e.touches[0]:e; sx=p.clientX; sy=p.clientY; card.style.transition='none';};
+  const move=e=>{ if(!drag)return; const p=e.touches?e.touches[0]:e; dx=p.clientX-sx; dy=p.clientY-sy;
+    card.style.transform=`translate(${dx}px,${dy}px) rotate(${dx/18}deg)`;
+    like.style.opacity=Math.max(0,dx/100); nope.style.opacity=Math.max(0,-dx/100);
+  };
+  const up=()=>{ if(!drag)return; drag=false; card.style.transition='transform .3s ease, opacity .3s';
+    if(dx>110){ fly(1); } else if(dx<-110){ fly(-1); }
+    else { card.style.transform=''; like.style.opacity=0; nope.style.opacity=0; }
+  };
+  card.addEventListener('touchstart',down,{passive:true}); card.addEventListener('touchmove',move,{passive:true}); card.addEventListener('touchend',up);
+  card.addEventListener('mousedown',down); window.addEventListener('mousemove',move); window.addEventListener('mouseup',up);
+  card._fly=fly;
+  function fly(dir){
+    card.style.transform=`translate(${dir*600}px,${dy}px) rotate(${dir*30}deg)`;
+    card.style.opacity=0;
+    const id=+card.dataset.id;
+    if(dir>0){ const l=store.likes; if(!l.includes(id)){l.push(id);store.likes=l;} const lot=LOTS.find(x=>x.id===id); toast('💚 Нравится! '+(lot?lot.title:'')); }
+    setTimeout(()=>{ deckQueue=deckQueue.filter(x=>x!==id); renderDeck(); },240);
+  }
+}
+document.getElementById('actLike').onclick=()=>{ const c=topCard(); if(c&&c._fly)c._fly(1); };
+document.getElementById('actNope').onclick=()=>{ const c=topCard(); if(c&&c._fly)c._fly(-1); };
+document.getElementById('actInfo').onclick=()=>{ const c=topCard(); if(c)openDetail(+c.dataset.id); };
+
+/* ============ КАТАЛОГ + ФИЛЬТРЫ ============ */
+let filter={cat:'all', special:null, gender:'any', age:'any'};
+function renderChips(){
+  const cc=document.getElementById('catChips');
+  cc.innerHTML=CATS.map(c=>`<button class="chip" data-cat="${c.k}" aria-pressed="${filter.cat===c.k}"><span class="e">${c.e}</span>${c.t}</button>`).join('');
+  cc.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{filter.cat=b.dataset.cat;renderChips();renderGrid()});
+
+  const sp=document.getElementById('specialChips');
+  const specials=[{k:'gift',t:'Отдам даром',e:'🎁'},{k:'box',t:'Коробка на месяц',e:'📦'},{k:'costume',t:'Костюмы и платья',e:'👗'},{k:'rent',t:'Аренда крупногабаритных',e:'🚲'}];
+  sp.innerHTML=specials.map(s=>`<button class="chip special" data-sp="${s.k}" aria-pressed="${filter.special===s.k}"><span class="e">${s.e}</span>${s.t}</button>`).join('');
+  sp.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{filter.special = filter.special===b.dataset.sp?null:b.dataset.sp; renderChips(); renderGrid()});
+
+  const dc=document.getElementById('demoChips');
+  const gOpt=[['any','Пол: любой'],['boy','👦 Мальчик'],['girl','👧 Девочка']];
+  const aOpt=[['any','Возраст: все'],['0','0–1'],['2','1–3'],['4','3–5'],['6','5–7'],['8','7–10'],['11','10–14']];
+  dc.innerHTML =
+    gOpt.map(([v,t])=>`<button class="chip" data-g="${v}" aria-pressed="${filter.gender===v}">${t}</button>`).join('')+
+    aOpt.map(([v,t])=>`<button class="chip" data-a="${v}" aria-pressed="${filter.age===v}">${t}</button>`).join('');
+  dc.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{filter.gender=b.dataset.g;renderChips();renderGrid()});
+  dc.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{filter.age=b.dataset.a;renderChips();renderGrid()});
+}
+function applyFilter(){
+  return LOTS.filter(l=>{
+    if(filter.cat!=='all' && l.cat!==filter.cat) return false;
+    if(filter.special==='costume' && !l.costume) return false;
+    if(filter.special && filter.special!=='costume' && l.mode!==filter.special) return false;
+    if(filter.gender!=='any' && l.gender!=='any' && l.gender!==filter.gender) return false;
+    if(filter.age!=='any' && String(l.age)!==filter.age) return false;
+    return true;
+  }).sort((a,b)=>a.d-b.d);
+}
+function lotCard(lot){
+  const [c1,c2]=palette(lot.id);
+  return `<div class="lot" data-id="${lot.id}">
+    <div class="thumb" style="background:linear-gradient(160deg,${c1},${c2})">
+      <div class="badges">${modeBadges(lot)}</div>${lot.e}</div>
+    <div class="lot-body">
+      <div class="lot-title">${lot.title}</div>
+      <div class="lot-meta"><span>📍 ${distText(lot.d)}</span>·<span>${genderE(lot.gender)} ${ageText(lot.age)}</span></div>
+      <div class="lot-owner"><span class="ava">${lot.owner.a}</span>${lot.owner.n}<span class="muted" style="margin-left:auto">⭐${lot.owner.r}</span></div>
+    </div></div>`;
+}
+function renderGrid(){
+  const g=document.getElementById('grid'); const items=applyFilter();
+  document.getElementById('gridEmpty').style.display = items.length?'none':'block';
+  g.innerHTML=items.map(lotCard).join('');
+  g.querySelectorAll('.lot').forEach(el=>el.onclick=()=>openDetail(+el.dataset.id));
+}
+
+/* ============ ПОЖЕЛАНИЯ ============ */
+function renderWishes(){
+  const w=document.getElementById('wishList');
+  const items=WISHES.slice().sort((a,b)=>a.d-b.d);
+  w.innerHTML=items.map(x=>{
+    const [c1,c2]=palette(x.id);
+    return `<div class="lot" style="flex-direction:row;align-items:stretch;margin-bottom:13px">
+      <div class="thumb" style="width:96px;aspect-ratio:auto;flex:0 0 96px;font-size:44px;background:linear-gradient(160deg,${c1},${c2})">${x.e}</div>
+      <div class="lot-body" style="flex:1">
+        <div class="lot-title" style="-webkit-line-clamp:2;min-height:auto">${x.title}</div>
+        <div style="font-size:12.5px;color:var(--ink);font-weight:700;margin:4px 0">💬 ${x.want}</div>
+        <div class="lot-meta"><span>${x.owner.a} ${x.owner.n}</span>·<span>📍 ${distText(x.d)}</span>·<span>${genderE(x.gender)} ${ageText(x.age)}</span></div>
+      </div></div>`;
+  }).join('');
+}
+
+/* ============ КАРТА ============ */
+let map, markersLayer, mapMode='toys';
+function initMap(){
+  const center=userCenter();
+  if(!map){
+    map=L.map('map',{zoomControl:true}).setView(center,13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+    markersLayer=L.layerGroup().addTo(map);
+  } else { map.setView(center,13); }
+  setTimeout(()=>map.invalidateSize(),120);
+  drawMarkers();
+}
+function colorPin(color,emoji){
+  return L.divIcon({className:'',html:`<div style="background:${color};width:38px;height:38px;border-radius:50% 50% 50% 2px;transform:rotate(45deg);
+    box-shadow:0 4px 10px rgba(0,0,0,.3);display:grid;place-items:center;border:2.5px solid #fff">
+    <span style="transform:rotate(-45deg);font-size:18px">${emoji}</span></div>`,iconSize:[38,38],iconAnchor:[19,38]});
+}
+function drawMarkers(){
+  if(!markersLayer)return; markersLayer.clearLayers();
+  // метка пользователя
+  const uc=userCenter();
+  L.marker(uc,{icon:colorPin('#2B2540','🏠')}).addTo(markersLayer).bindPopup('<div class="pop-t">Вы здесь</div>');
+  const sub=document.getElementById('mapSub');
+  if(mapMode==='toys'){
+    const items=applyFilter().concat(LOTS.filter(l=>!applyFilter().includes(l)&&false));
+    LOTS.forEach(lot=>{
+      const m=MODES[lot.mode];
+      const col = lot.mode==='gift'?'#3DD68C':lot.mode==='rent'?'#A06CFF':lot.mode==='box'?'#FF9F45':'#4CC2FF';
+      const mk=L.marker(lotLatLng(lot),{icon:colorPin(col,lot.e)}).addTo(markersLayer);
+      mk.bindPopup(`<div class="pop-t">${lot.title}</div><div class="pop-m">${m.e} ${m.t} · 📍 ${distText(lot.d)} · ${lot.owner.n}</div><button class="pop-b" onclick="openDetail(${lot.id})">Открыть лот</button>`);
+    });
+    sub.textContent=`🧸 ${LOTS.length} игрушек рядом · нажмите на метку`;
+  } else {
+    WISHES.forEach(x=>{
+      const mk=L.marker(lotLatLng(x),{icon:colorPin('#FF5D73','🙋')}).addTo(markersLayer);
+      mk.bindPopup(`<div class="pop-t">${x.title}</div><div class="pop-m">${x.want}</div><div class="pop-m">${x.owner.a} ${x.owner.n} · 📍 ${distText(x.d)}</div>`);
+    });
+    sub.textContent=`🙋 ${WISHES.length} предложений «ищу поиграть» рядом`;
+  }
+}
+document.getElementById('segToys').onclick=()=>{mapMode='toys';document.getElementById('segToys').setAttribute('aria-pressed',true);document.getElementById('segWish').setAttribute('aria-pressed',false);drawMarkers()};
+document.getElementById('segWish').onclick=()=>{mapMode='wish';document.getElementById('segWish').setAttribute('aria-pressed',true);document.getElementById('segToys').setAttribute('aria-pressed',false);drawMarkers()};
+
+/* ============ ДЕТАЛИ ЛОТА ============ */
+function openSheet(bg){ bg.classList.add('open'); document.body.style.overflow='hidden'; }
+function closeSheet(bg){ bg.classList.remove('open'); document.body.style.overflow=''; }
+document.getElementById('detailBg').onclick=e=>{ if(e.target.id==='detailBg') closeSheet(detailBg); };
+document.getElementById('proposeBg').onclick=e=>{ if(e.target.id==='proposeBg') closeSheet(proposeBg); };
+
+function openDetail(id){
+  const lot=LOTS.find(l=>l.id===id); if(!lot)return;
+  const [c1,c2]=palette(lot.id);
+  const liked=store.likes.includes(id);
+  const m=MODES[lot.mode];
+  const revHTML = lot.reviews&&lot.reviews.length
+    ? lot.reviews.map(r=>`<div class="review"><div class="top"><span class="ava" style="width:26px;height:26px">${r.a[0]}</span>${r.a} <span class="stars" style="margin-left:auto">${stars(r.s)}</span></div><p>${r.t}</p></div>`).join('')
+    : `<div class="muted" style="font-weight:700">Пока нет отзывов</div>`;
+  const valLine = lot.mode==='gift' ? '🎁 Отдают даром' : (lot.mode==='rent'? `🚲 Аренда · ориентир ${lot.value} ₽` : `⚖️ Ценность ≈ ${lot.value} ₽`);
+  detailSheet.innerHTML=`
+    <div class="grab"></div>
+    <button class="detail-close" onclick="closeSheet(detailBg)">✕</button>
+    <div class="detail-pic" style="background:linear-gradient(160deg,${c1},${c2})">
+      <div class="badges">${modeBadges(lot)}<span class="badge b-dist">📍 ${distText(lot.d)}</span></div>${lot.e}</div>
+    <div class="detail-body">
+      <h2>${lot.title}</h2>
+      <div class="value-tag">${valLine}</div>
+      <span class="value-tag" style="margin-left:6px">${CATS.find(c=>c.k===lot.cat)?.e} ${catName(lot.cat)}</span>
+      <span class="value-tag" style="margin-left:6px">${genderE(lot.gender)} ${ageText(lot.age)}</span>
+
+      <div class="owner-row">
+        <span class="ava">${lot.owner.a}</span>
+        <div><div style="font-weight:800">${lot.owner.n}</div><div class="stars">${stars(lot.owner.r)} <span class="muted" style="font-size:12px;font-weight:700">${lot.owner.r} · ${lot.owner.rc} отзывов</span></div></div>
+      </div>
+
+      <p style="font-size:14.5px;line-height:1.55;font-weight:600">${lot.desc}</p>
+      ${lot.want?`<div class="want-box"><b>Хочет взамен:</b> ${lot.want}</div>`:''}
+
+      ${lot.mode==='gift'
+        ? `<button class="btn green" onclick="requestGift(${id})">🎁 Забрать в дар</button>`
+        : lot.mode==='rent'
+        ? `<button class="btn accent" onclick="rentLot(${id})">🚲 Взять в аренду</button>`
+        : `<button class="btn accent" onclick="openPropose(${id})">🔄 Предложить обмен</button>`}
+      <button class="btn ghost" style="margin-top:10px" onclick="toggleLike(${id},this)">${liked?'💚 В понравившихся':'🤍 В понравившиеся'}</button>
+
+      <h3 style="font-size:18px;margin:22px 0 12px">Отзывы об участнике</h3>
+      ${revHTML}
+      <div class="spacer"></div>
+    </div>`;
+  openSheet(detailBg);
+}
+function toggleLike(id,btn){ const l=store.likes; const i=l.indexOf(id);
+  if(i<0){l.push(id);btn.innerHTML='💚 В понравившихся';toast('Добавлено в понравившиеся')}
+  else{l.splice(i,1);btn.innerHTML='🤍 В понравившиеся';}
+  store.likes=l;
+}
+function requestGift(id){ closeSheet(detailBg); toast('🎁 Запрос отправлен! Владелец получит уведомление'); }
+function rentLot(id){ closeSheet(detailBg); toast('🚲 Заявка на аренду отправлена'); }
+
+/* ============ ПРЕДЛОЖИТЬ РАВНОЗНАЧНЫЙ ОБМЕН ============ */
+function myExchangeable(){
+  // мои лоты для обмена + демо-инвентарь
+  const demo=[
+    {id:9001,title:'Кубики-сортер',e:'🧩',value:1400},
+    {id:9002,title:'Кукольная коляска',e:'🛒',value:2100},
+    {id:9003,title:'Набор посудки',e:'🍳',value:900},
+    {id:9004,title:'Машинка-каталка',e:'🚗',value:1800},
+  ];
+  const mine=store.mine.filter(l=>l.type!=='wish'&&l.mode==='exchange').map(l=>({id:l.id,title:l.title,e:l.e,value:l.value}));
+  return mine.concat(demo);
+}
+function openPropose(id){
+  const target=LOTS.find(l=>l.id===id); if(!target)return;
+  closeSheet(detailBg);
+  const inv=myExchangeable();
+  proposeSheet.innerHTML=`
+    <div class="grab"></div>
+    <button class="detail-close" onclick="closeSheet(proposeBg)">✕</button>
+    <div class="detail-body" style="padding-top:6px">
+      <h2 style="font-size:20px">Предложить обмен</h2>
+      <p class="muted" style="font-weight:700;margin:8px 0 0">Вы хотите: <b style="color:var(--ink)">${target.e} ${target.title}</b> · ценность ≈ ${target.value} ₽</p>
+      <div class="match-note"><span class="e">⚖️</span><div>Предлагайте <b>равнозначное по цене</b>. Подходящие варианты помечены зелёным. Разница до ±25% — ок.</div></div>
+      <div style="font-weight:800;margin-bottom:10px">Выберите свою игрушку:</div>
+      <div id="invList">
+      ${inv.map(it=>{
+        const diff=Math.abs(it.value-target.value)/Math.max(1,target.value);
+        const ok=diff<=0.25;
+        return `<button class="my-lot" data-iid="${it.id}" data-ok="${ok}">
+          <div class="mini" style="background:linear-gradient(160deg,${palette(it.id)[0]},${palette(it.id)[1]})">${it.e}</div>
+          <div><div class="t">${it.title}</div><div class="v">≈ ${it.value} ₽</div></div>
+          <div class="fit ${ok?'fit-ok':'fit-low'}">${ok?'равнозначно ✓':'не равно ⚠'}</div>
+        </button>`;
+      }).join('')}
+      </div>
+      <button class="btn green" id="sendOffer" disabled style="opacity:.5">Выберите игрушку</button>
+      <div class="spacer"></div>
+    </div>`;
+  let chosen=null;
+  proposeSheet.querySelectorAll('.my-lot').forEach(b=>b.onclick=()=>{
+    proposeSheet.querySelectorAll('.my-lot').forEach(x=>x.setAttribute('aria-pressed',false));
+    b.setAttribute('aria-pressed',true); chosen=b.dataset.iid;
+    const send=document.getElementById('sendOffer'); send.disabled=false; send.style.opacity=1;
+    send.textContent = b.dataset.ok==='true' ? 'Отправить равнозначное предложение' : 'Отправить (ценность отличается)';
+  });
+  document.getElementById('sendOffer').onclick=()=>{ if(!chosen)return; closeSheet(proposeBg); toast('🔄 Предложение обмена отправлено!'); };
+  openSheet(proposeBg);
+}
+
+/* ============ СОЗДАНИЕ ЛОТА ============ */
+let createState={type:'offer',emoji:'🧸',mode:'exchange'};
+function buildCreate(){
+  document.getElementById('cCat').innerHTML=CATS.filter(c=>c.k!=='all').map(c=>`<option value="${c.k}">${c.e} ${c.t}</option>`).join('');
+  const ep=document.getElementById('cEmoji');
+  ep.innerHTML=EMOJIS.map(e=>`<button type="button" data-e="${e}" aria-pressed="${e===createState.emoji}">${e}</button>`).join('');
+  ep.querySelectorAll('button').forEach(b=>b.onclick=()=>{createState.emoji=b.dataset.e;ep.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.e===createState.emoji))});
+  document.querySelectorAll('#postType button').forEach(b=>b.onclick=()=>{createState.type=b.dataset.t;syncCreate()});
+  document.querySelectorAll('#cMode button').forEach(b=>b.onclick=()=>{createState.mode=b.dataset.m;document.querySelectorAll('#cMode button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.m===createState.mode));document.getElementById('valField').style.display=(createState.mode==='gift')?'none':'block'});
+}
+function syncCreate(){
+  document.querySelectorAll('#postType button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.t===createState.type));
+  const wish=createState.type==='wish';
+  document.getElementById('createTitle').textContent = wish?'Новое пожелание':'Новый лот';
+  document.getElementById('lblTitle').textContent = wish?'Что ищете поиграть?':'Что предлагаете?';
+  document.getElementById('cTitle').placeholder = wish?'Например, большой динозавр T-Rex':'Например, деревянная железная дорога';
+  document.getElementById('lblWant').innerHTML = wish?'Что предложите взамен? <span class="muted">(можно много)</span>':'Что хотите взамен? <span class="muted">(необязательно)</span>';
+  document.getElementById('cWant').placeholder = wish?'Например: коляска для кукол, кухня, набор посуды — выбирайте':'Например: конструктор крупные блоки или самокат';
+  document.getElementById('modeField').style.display = wish?'none':'block';
+  document.getElementById('valField').style.display = (wish||createState.mode==='gift')?'none':'block';
+  document.getElementById('cSubmit').textContent = wish?'Опубликовать пожелание':'Опубликовать лот';
+}
+document.getElementById('cSubmit').onclick=()=>{
+  const title=document.getElementById('cTitle').value.trim();
+  if(!title){ toast('Введите название'); return; }
+  const obj={
+    id:Date.now()%1000000, e:createState.emoji, title,
+    cat:document.getElementById('cCat').value,
+    age:+document.getElementById('cAge').value,
+    gender:document.getElementById('cGender').value,
+    d:0.1, want:document.getElementById('cWant').value.trim(),
+    desc:document.getElementById('cDesc').value.trim()||'Без описания',
+    owner:{n:(user&&user.name)||'Вы',a:'🙂',r:5.0,rc:0}, reviews:[],
+    type:createState.type
+  };
+  if(createState.type==='wish'){
+    WISHES.unshift(obj);
+  } else {
+    obj.mode=createState.mode;
+    obj.value=createState.mode==='gift'?0:(+document.getElementById('cValue').value||1000);
+    if(obj.cat==='clothes') obj.costume=true;
+    LOTS.unshift(obj);
+    deckQueue=[];
+  }
+  const mine=store.mine; mine.push(obj); store.mine=mine;
+  document.getElementById('cTitle').value=''; document.getElementById('cDesc').value=''; document.getElementById('cWant').value='';
+  toast(createState.type==='wish'?'🙋 Пожелание опубликовано!':'✅ Лот опубликован!');
+  nav(createState.type==='wish'?'wishes':'catalog');
+};
+
+/* ============ ПРОФИЛЬ ============ */
+function renderProfile(){
+  if(!user)return;
+  document.getElementById('pName').textContent=user.name;
+  document.getElementById('pAva').textContent='🙂';
+  document.getElementById('pKidEmoji').textContent=genderE(user.gender);
+  document.getElementById('pKidLine').textContent='Ребёнку '+ageText(+user.age);
+  document.getElementById('pLocLine').textContent='📍 '+user.addr;
+  document.getElementById('stMy').textContent=store.mine.length;
+  document.getElementById('stLikes').textContent=store.likes.length;
+}
+document.querySelectorAll('[data-go]').forEach(el=>el.onclick=()=>{
+  const k=el.dataset.go;
+  if(k==='myLots'){ if(!store.mine.length){toast('У вас пока нет лотов — создайте первый!');nav('create');return;} filter={cat:'all',special:null,gender:'any',age:'any'}; nav('catalog'); toast('Показаны все лоты (ваши — сверху)'); }
+  if(k==='likes'){ if(!store.likes.length){toast('Вы ещё ничего не лайкнули в ленте');return;} filter={cat:'all',special:null,gender:'any',age:'any'}; nav('catalog'); }
+});
+document.getElementById('resetApp').onclick=()=>{ if(confirm('Сбросить профиль и пройти регистрацию заново?')){ localStorage.removeItem('dm_user'); location.reload(); } };
+document.getElementById('editLoc').onclick=()=>changeLoc();
+document.getElementById('locChip').onclick=()=>changeLoc();
+function changeLoc(){
+  const a=prompt('Ваша локация (город, район или адрес):', user?user.addr:'');
+  if(a&&a.trim()){ user.addr=a.trim(); detectCity(a); store.user=user; updateLocChip(); if(map){map.setView(userCenter(),13);drawMarkers();} toast('📍 Локация обновлена'); }
+}
+function detectCity(addr){
+  const low=addr.toLowerCase();
+  for(const k in CITY_CENTERS){ if(low.includes(k.toLowerCase().split('-')[0])||low.includes(k.toLowerCase())){ user.cityKey=k; [user.lat,user.lng]=CITY_CENTERS[k]; return; } }
+  if(low.includes('питер')||low.includes('спб')){user.cityKey='Санкт-Петербург';[user.lat,user.lng]=CITY_CENTERS['Санкт-Петербург'];}
+}
+function updateLocChip(){ document.getElementById('locText').textContent = user? user.addr.split(',')[0] : 'Локация'; }
+
+/* ============ ОНБОРДИНГ ============ */
+let onbG=null;
+document.querySelectorAll('#onbGender button').forEach(b=>b.onclick=()=>{onbG=b.dataset.g;document.querySelectorAll('#onbGender button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.g===onbG))});
+document.getElementById('geoBtn').onclick=()=>{
+  const btn=document.getElementById('geoBtn'); btn.textContent='📍 Определяем…';
+  if(!navigator.geolocation){ fallbackGeo(); return; }
+  navigator.geolocation.getCurrentPosition(
+    pos=>{ document.getElementById('onbAddr').value='Моё местоположение (рядом)'; btn.textContent='✅ Местоположение определено'; window._geo=[pos.coords.latitude,pos.coords.longitude]; },
+    ()=>fallbackGeo(), {timeout:6000});
+  function fallbackGeo(){ document.getElementById('onbAddr').value='Санкт-Петербург'; btn.textContent='📍 Определить автоматически'; toast('Не удалось определить — впишите вручную'); }
+};
+document.getElementById('onbSubmit').onclick=()=>{
+  const name=document.getElementById('onbName').value.trim();
+  const addr=document.getElementById('onbAddr').value.trim();
+  const age=document.getElementById('onbAge').value;
+  let ok=true;
+  const set=(id,c)=>document.getElementById(id).classList.toggle('show',!c);
+  set('errName',!!name); set('errAddr',!!addr); set('errAge',!!age); set('errGender',!!onbG);
+  if(!name||!addr||!age||!onbG){ ok=false; }
+  if(!ok){ toast('Заполните обязательные поля'); return; }
+  user={name,addr,age,gender:onbG};
+  if(window._geo){[user.lat,user.lng]=window._geo;} else detectCity(addr);
+  if(!user.lat){[user.lat,user.lng]=CITY_CENTERS['Санкт-Петербург'];user.cityKey='Санкт-Петербург';}
+  store.user=user;
+  startApp();
+};
+
+/* ============ Запуск ============ */
+function startApp(){
+  document.getElementById('onb').style.display='none';
+  document.getElementById('app').style.display='flex';
+  updateLocChip();
+  buildCreate(); renderChips(); syncCreate();
+  nav('feed');
+}
+/* регистрация service worker (работает при открытии по http/https, напр. на GitHub Pages) */
+if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+(function init(){
+  if(user){
+    document.getElementById('onb').style.display='none';
+    document.getElementById('app').style.display='flex';
+    updateLocChip(); buildCreate(); renderChips(); syncCreate(); nav('feed');
+  } else {
+    document.getElementById('app').style.display='none';
+  }
+})();
+</script>
+</body>
+</html>
