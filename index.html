@@ -8,8 +8,8 @@
 
 <!-- PWA: устанавливается на телефон как приложение -->
 <link rel="manifest" href="manifest.json">
-<link rel="icon" type="image/png" href="icons/favicon-96.png">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icons/favicon-96.png?v=2">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=2">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -179,6 +179,23 @@ main{flex:1;min-height:0;padding-bottom:86px}
 
 /* ===== Карта ===== */
 #map{width:100%;height:calc(100dvh - 220px);min-height:340px;border-radius:0}
+.map-sub{padding:10px 16px 4px;font-weight:700}
+.map-box{position:relative}
+.locate-fab{position:absolute;right:14px;bottom:18px;z-index:1000;background:#fff;border:1.5px solid var(--line);
+  border-radius:999px;padding:11px 15px;font-weight:800;font-size:13.5px;box-shadow:var(--shadow-lg);display:flex;align-items:center;gap:6px}
+.locate-fab:active{transform:scale(.95)}
+/* загрузка фото */
+.photo-up{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-start}
+.photo-add{width:84px;height:84px;border-radius:16px;border:2px dashed var(--c-blue);background:#F2FAFF;color:#1f8fcf;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:24px;font-weight:800;flex:0 0 auto}
+.photo-add span{font-size:10.5px}
+.photo-prev{display:flex;gap:10px;flex-wrap:wrap}
+.photo-prev .ph{position:relative;width:84px;height:84px;border-radius:16px;background-size:cover;background-position:center;box-shadow:var(--shadow);border:1px solid var(--line)}
+.photo-prev .ph button{position:absolute;top:-7px;right:-7px;width:24px;height:24px;border-radius:50%;background:var(--c-red);color:#fff;font-weight:800;box-shadow:var(--shadow);font-size:13px;line-height:1}
+/* баннер коллекции (понравившиеся / мои) */
+.coll-banner{display:flex;align-items:center;gap:8px;margin:0 16px 10px;background:#FFF0F3;border:1.5px solid #FFD7DE;
+  border-radius:14px;padding:10px 14px;font-weight:800;font-size:13.5px;color:var(--c-red)}
+.coll-banner button{margin-left:auto;background:var(--c-red);color:#fff;border-radius:999px;padding:6px 12px;font-weight:800;font-size:12px}
 .map-toggle{display:flex;gap:8px;padding:10px 16px 0}
 .seg{flex:1;background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:10px;font-weight:800;font-size:13px;transition:.15s}
 .seg[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
@@ -425,6 +442,7 @@ main{flex:1;min-height:0;padding-bottom:86px}
       <div class="pad" style="padding-bottom:0">
         <div class="section-title">Каталог обменов</div>
       </div>
+      <div id="collBanner" class="coll-banner" style="display:none"></div>
       <div class="chips" id="catChips"></div>
       <div class="chips" id="specialChips" style="padding-top:0"></div>
       <div class="chips" id="demoChips" style="padding-top:0"></div>
@@ -445,8 +463,11 @@ main{flex:1;min-height:0;padding-bottom:86px}
         <button class="seg" id="segToys" aria-pressed="true">🧸 Карта игрушек</button>
         <button class="seg" id="segWish" aria-pressed="false">🙋 Карта предложений</button>
       </div>
-      <div style="padding:10px 16px 4px" class="muted" id="mapSub" style="font-weight:700"></div>
-      <div id="map"></div>
+      <div class="map-sub muted" id="mapSub"></div>
+      <div class="map-box">
+        <div id="map"></div>
+        <button class="locate-fab" id="locateBtn" title="Определить моё местоположение">📍 Я здесь</button>
+      </div>
     </section>
 
     <!-- СОЗДАТЬ -->
@@ -464,7 +485,17 @@ main{flex:1;min-height:0;padding-bottom:86px}
         </div>
 
         <div class="field">
-          <label>Картинка</label>
+          <label>Фотографии объекта</label>
+          <input type="file" id="cPhoto" accept="image/*" multiple style="display:none">
+          <div class="photo-up">
+            <div class="photo-add" id="photoAddBtn">📷<span>Добавить фото</span></div>
+            <div class="photo-prev" id="photoPrev"></div>
+          </div>
+          <div class="muted" style="font-size:12px;font-weight:700;margin-top:6px">Покажите, как реально выглядит игрушка (можно несколько)</div>
+        </div>
+
+        <div class="field">
+          <label>Или иконка (если без фото)</label>
           <div class="emoji-pick" id="cEmoji"></div>
         </div>
 
@@ -643,14 +674,7 @@ main{flex:1;min-height:0;padding-bottom:86px}
 <script>
 /* ============ Логотип-ладонь (SVG) ============ */
 function handSVG(size){
-  return `<svg class="hand" width="${size}" height="${size}" viewBox="0 0 100 100" aria-label="Давай меняться">
-    <rect x="18" y="40" width="9" height="27" rx="4.5" fill="#A06CFF" transform="rotate(-38 22 53)"/>
-    <rect x="30" y="45" width="44" height="44" rx="17" fill="#FFB36B"/>
-    <rect x="33" y="22" width="9" height="40" rx="4.5" fill="#FF5D73"/>
-    <rect x="45" y="15" width="9" height="47" rx="4.5" fill="#FFD23F"/>
-    <rect x="57" y="19" width="9" height="43" rx="4.5" fill="#3DD68C"/>
-    <rect x="68" y="27" width="8.5" height="35" rx="4.2" fill="#4CC2FF"/>
-  </svg>`;
+  return `<img src="icons/hand.png?v=2" width="${size}" alt="Давай меняться" style="display:block;height:auto">`;
 }
 document.getElementById('onbHand').innerHTML = handSVG(78);
 document.getElementById('barHand').innerHTML = handSVG(34);
@@ -800,6 +824,10 @@ function nav(v){
 }
 document.querySelectorAll('[data-nav]').forEach(b=>b.addEventListener('click',()=>nav(b.dataset.nav)));
 
+/* фон карточки: фото пользователя либо цветной градиент с эмодзи */
+function lotPicStyle(lot){ const [c1,c2]=palette(lot.id); return lot.img ? `background-image:url('${lot.img}');background-size:cover;background-position:center` : `background:linear-gradient(160deg,${c1},${c2})`; }
+function lotPicEmoji(lot){ return lot.img ? '' : lot.e; }
+
 /* ============ ЛЕНТА (тиндер) ============ */
 let deckQueue=[];
 function feedLots(){
@@ -829,9 +857,9 @@ function renderDeck(){
     card.style.transform=`scale(${scale}) translateY(${ty}px)`;
     card.style.zIndex=idx;
     card.innerHTML=`
-      <div class="pic" style="background:linear-gradient(160deg,${c1},${c2})">
+      <div class="pic" style="${lotPicStyle(lot)}">
         <div class="badges">${modeBadges(lot)}<span class="badge b-dist">📍 ${distText(lot.d)}</span></div>
-        ${lot.e}
+        ${lotPicEmoji(lot)}
         <div class="stamp like">Хочу</div><div class="stamp nope">Мимо</div>
       </div>
       <div class="info">
@@ -872,7 +900,7 @@ document.getElementById('actNope').onclick=()=>{ const c=topCard(); if(c&&c._fly
 document.getElementById('actInfo').onclick=()=>{ const c=topCard(); if(c)openDetail(+c.dataset.id); };
 
 /* ============ КАТАЛОГ + ФИЛЬТРЫ ============ */
-let filter={cat:'all', special:null, gender:'any', age:'any'};
+let filter={cat:'all', special:null, gender:'any', age:'any', coll:null};
 function renderChips(){
   const cc=document.getElementById('catChips');
   cc.innerHTML=CATS.map(c=>`<button class="chip" data-cat="${c.k}" aria-pressed="${filter.cat===c.k}"><span class="e">${c.e}</span>${c.t}</button>`).join('');
@@ -893,7 +921,10 @@ function renderChips(){
   dc.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{filter.age=b.dataset.a;renderChips();renderGrid()});
 }
 function applyFilter(){
-  return LOTS.filter(l=>{
+  let base=LOTS;
+  if(filter.coll==='likes'){ const s=store.likes; base=LOTS.filter(l=>s.includes(l.id)); }
+  else if(filter.coll==='mine'){ const ids=store.mine.filter(l=>l.type!=='wish').map(l=>l.id); base=LOTS.filter(l=>ids.includes(l.id)); }
+  return base.filter(l=>{
     if(filter.cat!=='all' && l.cat!==filter.cat) return false;
     if(filter.special==='costume' && !l.costume) return false;
     if(filter.special && filter.special!=='costume' && l.mode!==filter.special) return false;
@@ -902,11 +933,17 @@ function applyFilter(){
     return true;
   }).sort((a,b)=>a.d-b.d);
 }
+function clearColl(){ filter.coll=null; renderChips(); renderGrid(); }
+function updateCollBanner(){
+  const b=document.getElementById('collBanner'); const n=applyFilter().length;
+  if(filter.coll==='likes'){ b.style.display='flex'; b.innerHTML=`❤️ Понравившиеся: ${n} <button onclick="clearColl()">Показать все</button>`; }
+  else if(filter.coll==='mine'){ b.style.display='flex'; b.innerHTML=`📦 Мои лоты: ${n} <button onclick="clearColl()">Показать все</button>`; }
+  else b.style.display='none';
+}
 function lotCard(lot){
-  const [c1,c2]=palette(lot.id);
   return `<div class="lot" data-id="${lot.id}">
-    <div class="thumb" style="background:linear-gradient(160deg,${c1},${c2})">
-      <div class="badges">${modeBadges(lot)}</div>${lot.e}</div>
+    <div class="thumb" style="${lotPicStyle(lot)}">
+      <div class="badges">${modeBadges(lot)}</div>${lotPicEmoji(lot)}</div>
     <div class="lot-body">
       <div class="lot-title">${lot.title}</div>
       <div class="lot-meta"><span>📍 ${distText(lot.d)}</span>·<span>${genderE(lot.gender)} ${ageText(lot.age)}</span></div>
@@ -914,6 +951,7 @@ function lotCard(lot){
     </div></div>`;
 }
 function renderGrid(){
+  updateCollBanner();
   const g=document.getElementById('grid'); const items=applyFilter();
   document.getElementById('gridEmpty').style.display = items.length?'none':'block';
   g.innerHTML=items.map(lotCard).join('');
@@ -944,10 +982,24 @@ function initMap(){
     map=L.map('map',{zoomControl:true}).setView(center,13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
     markersLayer=L.layerGroup().addTo(map);
+    map.on('locationfound', onLocationFound);
+    map.on('locationerror', ()=>toast('📍 Не удалось определить — разрешите доступ к геолокации'));
   } else { map.setView(center,13); }
   setTimeout(()=>map.invalidateSize(),120);
   drawMarkers();
 }
+let userAccCircle=null;
+function onLocationFound(e){
+  user.lat=e.latlng.lat; user.lng=e.latlng.lng; store.user=user;
+  if(userAccCircle) map.removeLayer(userAccCircle);
+  userAccCircle=L.circle(e.latlng,{radius:Math.min(e.accuracy||300,2000),color:'#4CC2FF',weight:1.5,fillColor:'#4CC2FF',fillOpacity:.15}).addTo(map);
+  drawMarkers();
+  document.getElementById('locText').textContent='Моё местоположение';
+  toast('📍 Вы на карте!');
+}
+(function(){ const lb=document.getElementById('locateBtn');
+  if(lb) lb.onclick=()=>{ toast('📍 Определяем местоположение…'); if(map) map.locate({setView:true, maxZoom:15, enableHighAccuracy:true}); };
+})();
 function colorPin(color,emoji){
   return L.divIcon({className:'',html:`<div style="background:${color};width:38px;height:38px;border-radius:50% 50% 50% 2px;transform:rotate(45deg);
     box-shadow:0 4px 10px rgba(0,0,0,.3);display:grid;place-items:center;border:2.5px solid #fff">
@@ -997,8 +1049,8 @@ function openDetail(id){
   detailSheet.innerHTML=`
     <div class="grab"></div>
     <button class="detail-close" onclick="closeSheet(detailBg)">✕</button>
-    <div class="detail-pic" style="background:linear-gradient(160deg,${c1},${c2})">
-      <div class="badges">${modeBadges(lot)}<span class="badge b-dist">📍 ${distText(lot.d)}</span></div>${lot.e}</div>
+    <div class="detail-pic" style="${lotPicStyle(lot)}">
+      <div class="badges">${modeBadges(lot)}<span class="badge b-dist">📍 ${distText(lot.d)}</span></div>${lotPicEmoji(lot)}</div>
     <div class="detail-body">
       <h2>${lot.title}</h2>
       <div class="value-tag">${valLine}</div>
@@ -1084,7 +1136,29 @@ function openPropose(id){
 }
 
 /* ============ СОЗДАНИЕ ЛОТА ============ */
-let createState={type:'offer',emoji:'🧸',mode:'exchange'};
+let createState={type:'offer',emoji:'🧸',mode:'exchange',photos:[]};
+function resizeImg(src,max,q,cb){
+  const im=new Image();
+  im.onload=()=>{ let w=im.width,h=im.height; if(w>max||h>max){ const k=Math.min(max/w,max/h); w=Math.round(w*k); h=Math.round(h*k); }
+    const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(im,0,0,w,h);
+    cb(cv.toDataURL('image/jpeg',q)); };
+  im.src=src;
+}
+function renderPhotoPrev(){
+  const p=document.getElementById('photoPrev');
+  p.innerHTML=createState.photos.map((d,i)=>`<div class="ph" style="background-image:url('${d}')"><button type="button" data-i="${i}">✕</button></div>`).join('');
+  p.querySelectorAll('button').forEach(b=>b.onclick=()=>{createState.photos.splice(+b.dataset.i,1);renderPhotoPrev()});
+}
+function setupPhoto(){
+  const inp=document.getElementById('cPhoto');
+  document.getElementById('photoAddBtn').onclick=()=>inp.click();
+  inp.onchange=()=>{ const files=[...inp.files]; inp.value='';
+    files.forEach(f=>{ if(!f.type.startsWith('image/'))return;
+      const r=new FileReader(); r.onload=()=>resizeImg(r.result,900,0.7,d=>{ createState.photos.push(d); renderPhotoPrev(); });
+      r.readAsDataURL(f);
+    });
+  };
+}
 function buildCreate(){
   document.getElementById('cCat').innerHTML=CATS.filter(c=>c.k!=='all').map(c=>`<option value="${c.k}">${c.e} ${c.t}</option>`).join('');
   const ep=document.getElementById('cEmoji');
@@ -1092,6 +1166,7 @@ function buildCreate(){
   ep.querySelectorAll('button').forEach(b=>b.onclick=()=>{createState.emoji=b.dataset.e;ep.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.e===createState.emoji))});
   document.querySelectorAll('#postType button').forEach(b=>b.onclick=()=>{createState.type=b.dataset.t;syncCreate()});
   document.querySelectorAll('#cMode button').forEach(b=>b.onclick=()=>{createState.mode=b.dataset.m;document.querySelectorAll('#cMode button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.m===createState.mode));document.getElementById('valField').style.display=(createState.mode==='gift')?'none':'block'});
+  setupPhoto();
 }
 function syncCreate(){
   document.querySelectorAll('#postType button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.t===createState.type));
@@ -1116,6 +1191,7 @@ document.getElementById('cSubmit').onclick=()=>{
     d:0.1, want:document.getElementById('cWant').value.trim(),
     desc:document.getElementById('cDesc').value.trim()||'Без описания',
     owner:{n:(user&&user.name)||'Вы',a:'🙂',r:5.0,rc:0}, reviews:[],
+    img:createState.photos[0]||null, photos:createState.photos.slice(),
     type:createState.type
   };
   if(createState.type==='wish'){
@@ -1127,8 +1203,9 @@ document.getElementById('cSubmit').onclick=()=>{
     LOTS.unshift(obj);
     deckQueue=[];
   }
-  const mine=store.mine; mine.push(obj); store.mine=mine;
+  try{ const mine=store.mine; mine.push(obj); store.mine=mine; }catch(e){ toast('⚠️ Фото крупное — лот сохранён только на эту сессию'); }
   document.getElementById('cTitle').value=''; document.getElementById('cDesc').value=''; document.getElementById('cWant').value='';
+  createState.photos=[]; renderPhotoPrev();
   toast(createState.type==='wish'?'🙋 Пожелание опубликовано!':'✅ Лот опубликован!');
   nav(createState.type==='wish'?'wishes':'catalog');
 };
@@ -1146,8 +1223,8 @@ function renderProfile(){
 }
 document.querySelectorAll('[data-go]').forEach(el=>el.onclick=()=>{
   const k=el.dataset.go;
-  if(k==='myLots'){ if(!store.mine.length){toast('У вас пока нет лотов — создайте первый!');nav('create');return;} filter={cat:'all',special:null,gender:'any',age:'any'}; nav('catalog'); toast('Показаны все лоты (ваши — сверху)'); }
-  if(k==='likes'){ if(!store.likes.length){toast('Вы ещё ничего не лайкнули в ленте');return;} filter={cat:'all',special:null,gender:'any',age:'any'}; nav('catalog'); }
+  if(k==='myLots'){ if(!store.mine.filter(l=>l.type!=='wish').length){toast('У вас пока нет лотов — создайте первый!');nav('create');return;} filter={cat:'all',special:null,gender:'any',age:'any',coll:'mine'}; nav('catalog'); }
+  if(k==='likes'){ if(!store.likes.length){toast('Вы ещё ничего не лайкнули — листайте ленту и жмите ♥');return;} filter={cat:'all',special:null,gender:'any',age:'any',coll:'likes'}; nav('catalog'); }
 });
 document.getElementById('resetApp').onclick=()=>{ if(confirm('Сбросить профиль и пройти регистрацию заново?')){ localStorage.removeItem('dm_user'); location.reload(); } };
 document.getElementById('editLoc').onclick=()=>changeLoc();

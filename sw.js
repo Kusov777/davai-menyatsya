@@ -1,9 +1,10 @@
 /* Service worker «Давай Меняться» — офлайн-кэш + установка */
-const CACHE = 'davai-menyatsya-v1';
+const CACHE = 'davai-menyatsya-v2';
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
+  './icons/hand.png',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/apple-touch-icon.png',
