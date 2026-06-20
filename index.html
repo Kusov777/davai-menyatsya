@@ -706,61 +706,86 @@ const EMOJIS = ['🧸','🚗','🪀','🚂','🎨','📚','🧩','🎲','🏰','
 const PALETTES = [['#FFE3C2','#FFC9A3'],['#D9F2FF','#B6E4FF'],['#E7FBEF','#C5F2D8'],['#FBE5FF','#F0CCFF'],
 ['#FFF3C2','#FFE39A'],['#FFE0E5','#FFC2CC'],['#E5E9FF','#CDD5FF'],['#E9FBFA','#C7F1EE']];
 
+/* ===== Наша локальная база по Санкт-Петербургу (демо-сообщество) ===== */
 let LOTS = [
   {id:1,title:'Деревянная железная дорога',e:'🚂',cat:'toys',age:4,gender:'any',mode:'exchange',value:2200,
-   want:'Конструктор крупные блоки или гараж с машинками',desc:'Большой набор, 60 деталей, мост и тоннель. Сыну стало неинтересно.',d:0.4,
-   owner:{n:'Мария',a:'👩',r:4.9,rc:14},reviews:[{a:'Олег',s:5,t:'Обменялись быстро, всё на месте. Спасибо!'},{a:'Inna',s:5,t:'Очень приятная мама, дорога супер'}]},
-  {id:2,title:'Большой игрушечный гараж',e:'🏰',cat:'toys',age:4,gender:'boy',mode:'exchange',value:2500,
-   want:'Кукольный домик или набор доктора',desc:'4 этажа, лифт, шлагбаум. Машинки в комплекте.',d:0.7,
+   area:'Петроградская',lat:59.9663,lng:30.3110,
+   want:'Конструктор крупные блоки или игровой гараж',desc:'Большой набор, 60 деталей, мост и тоннель. Сыну стало неинтересно.',
+   owner:{n:'Мария',a:'👩',r:4.9,rc:14},reviews:[{a:'Олег',s:5,t:'Обменялись быстро у метро, всё на месте. Спасибо!'},{a:'Инна',s:5,t:'Очень приятная мама, дорога супер'}]},
+  {id:2,title:'Игровой гараж-парковка',e:'🏰',cat:'toys',age:4,gender:'boy',mode:'exchange',value:2500,
+   area:'Васильевский остров',lat:59.9430,lng:30.2800,
+   want:'Кукольный домик или набор доктора',desc:'4 этажа, лифт, шлагбаум. Машинки в комплекте.',
    owner:{n:'Денис',a:'🧔',r:4.7,rc:9},reviews:[{a:'Катя',s:5,t:'Гараж огонь, дети в восторге'}]},
-  {id:3,title:'Костюм Эльзы (платье)',e:'👗',cat:'clothes',age:6,gender:'girl',mode:'exchange',value:1800,costume:true,
-   want:'Любой карнавальный костюм на рост 116',desc:'Надевали раз на утренник. Рост 110-116.',d:1.1,
-   owner:{n:'Алёна',a:'👱‍♀️',r:5.0,rc:21},reviews:[{a:'Vera',s:5,t:'Платье как новое, дочь счастлива'},{a:'Настя',s:5,t:'Спасибо за честный обмен'}]},
-  {id:4,title:'Коробка игрушек 2-3 года',e:'📦',cat:'toys',age:2,gender:'any',mode:'box',value:3000,
-   want:'Такую же коробку для возраста 3-4',desc:'Сортеры, пирамидки, музыкальные. Меняемся на месяц и возвращаем.',d:0.9,
-   owner:{n:'Ольга',a:'👩‍🦰',r:4.8,rc:17},reviews:[{a:'Лена',s:5,t:'Отличная идея с коробкой, ребёнок месяц был занят'}]},
+  {id:3,title:'Костюм снежинки (платье)',e:'👗',cat:'clothes',age:6,gender:'girl',mode:'exchange',value:1800,costume:true,
+   area:'Московский р-н',lat:59.8517,lng:30.3214,
+   want:'Любой карнавальный костюм на рост 116',desc:'Надевали раз на утренник. Рост 110–116.',
+   owner:{n:'Алёна',a:'👱‍♀️',r:5.0,rc:21},reviews:[{a:'Вера',s:5,t:'Платье как новое, дочь счастлива'},{a:'Настя',s:5,t:'Спасибо за честный обмен'}]},
+  {id:4,title:'Коробка игрушек 2–3 года',e:'📦',cat:'toys',age:2,gender:'any',mode:'box',value:3000,
+   area:'Купчино',lat:59.8295,lng:30.3760,
+   want:'Такую же коробку для возраста 3–4',desc:'Сортеры, пирамидки, музыкальные. Меняемся на месяц и возвращаем.',
+   owner:{n:'Ольга',a:'👩‍🦰',r:4.8,rc:17},reviews:[{a:'Елена',s:5,t:'Отличная идея с коробкой, ребёнок месяц был занят'}]},
   {id:5,title:'Самокат трёхколёсный',e:'🛴',cat:'sport',age:4,gender:'any',mode:'exchange',value:2000,
-   want:'Беговел или ролики р.30-32',desc:'Светящиеся колёса, регулируется по высоте.',d:1.6,
-   owner:{n:'Pavel',a:'👨',r:4.6,rc:6},reviews:[]},
+   area:'Приморский р-н',lat:60.0086,lng:30.2580,
+   want:'Беговел или ролики р.30–32',desc:'Светящиеся колёса, регулируется по высоте.',
+   owner:{n:'Павел',a:'👨',r:4.6,rc:6},reviews:[]},
   {id:6,title:'Большой батут (аренда)',e:'🦘',cat:'sport',age:6,gender:'any',mode:'rent',value:6000,
-   want:'',desc:'Габаритный, дома стоит без дела. Берите на праздник/лето в аренду.',d:2.2,
-   owner:{n:'Сергей',a:'🧔‍♂️',r:4.9,rc:11},reviews:[{a:'Дима',s:5,t:'Брали на день рождения — спасли праздник!'}]},
-  {id:7,title:'Набор Доктор',e:'🩺',cat:'toys',age:4,gender:'any',mode:'gift',value:0,
-   want:'',desc:'Отдаём даром, переросли. Чемоданчик + инструменты.',d:0.5,
-   owner:{n:'Юлия',a:'👩‍🦱',r:4.8,rc:8},reviews:[{a:'Marina',s:5,t:'Спасибо что отдали даром, добрые люди'}]},
+   area:'г. Пушкин',lat:59.7160,lng:30.3960,
+   want:'',desc:'Габаритный, дома стоит без дела. Берите на праздник/лето в аренду.',
+   owner:{n:'Сергей',a:'🧔‍♂️',r:4.9,rc:11},reviews:[{a:'Дмитрий',s:5,t:'Брали на день рождения — спасли праздник!'}]},
+  {id:7,title:'Набор «Доктор»',e:'🩺',cat:'toys',age:4,gender:'any',mode:'gift',value:0,
+   area:'Академическая',lat:60.0125,lng:30.3953,
+   want:'',desc:'Отдаём даром, переросли. Чемоданчик + инструменты.',
+   owner:{n:'Юлия',a:'👩‍🦱',r:4.8,rc:8},reviews:[{a:'Марина',s:5,t:'Спасибо что отдали даром, добрые люди'}]},
   {id:8,title:'Конструктор крупные блоки',e:'🧱',cat:'toys',age:2,gender:'any',mode:'exchange',value:1500,
-   want:'Сортер или каталка',desc:'Крупные, безопасные, 80 деталей. Не LEGO — большие блоки для малышей.',d:1.3,
+   area:'Автово',lat:59.8672,lng:30.2620,
+   want:'Сортер или каталка',desc:'Крупные безопасные блоки, 80 деталей. Не LEGO — большие блоки для малышей.',
    owner:{n:'Игорь',a:'👨‍🦰',r:4.5,rc:5},reviews:[]},
-  {id:9,title:'Книги «Бином малыша» 6 шт',e:'📚',cat:'books',age:2,gender:'any',mode:'exchange',value:1200,
-   want:'Книжки-картонки или пазлы',desc:'Развивающие, твёрдые страницы, без потёртостей.',d:0.8,
-   owner:{n:'Нина',a:'👵',r:5.0,rc:19},reviews:[{a:'Olya',s:5,t:'Книги в идеале'}]},
-  {id:10,title:'Радиоуправляемая машинка',e:'🚗',cat:'toys',age:6,gender:'boy',mode:'exchange',value:2300,
-   want:'Трек hot wheels или вертолёт',desc:'Полный привод, аккумулятор держит. Пульт в комплекте.',d:1.9,
+  {id:9,title:'Книги-картонки, 6 шт',e:'📚',cat:'books',age:2,gender:'any',mode:'exchange',value:1200,
+   area:'Центральный р-н',lat:59.9311,lng:30.3609,
+   want:'Книжки-картонки или пазлы',desc:'Развивающие, твёрдые страницы, без потёртостей.',
+   owner:{n:'Нина',a:'👵',r:5.0,rc:19},reviews:[{a:'Оля',s:5,t:'Книги в идеале'}]},
+  {id:10,title:'Радиоуправляемая машина',e:'🚗',cat:'toys',age:6,gender:'boy',mode:'exchange',value:2300,
+   area:'Пр. Просвещения',lat:60.0510,lng:30.3340,
+   want:'Трек для машинок или вертолёт',desc:'Полный привод, аккумулятор держит. Пульт в комплекте.',
    owner:{n:'Артём',a:'🧑',r:4.7,rc:7},reviews:[]},
-  {id:11,title:'Мольберт для рисования',e:'🎨',cat:'craft',age:4,gender:'any',mode:'exchange',value:1700,
-   want:'Кинетический песок или пластилин-набор',desc:'Двусторонний: мел + маркер. Складной.',d:2.4,
-   owner:{n:'Дарья',a:'👩‍🎨',r:4.9,rc:13},reviews:[{a:'Sveta',s:5,t:'Мольберт супер, дочка рисует целыми днями'}]},
+  {id:11,title:'Мольберт двусторонний',e:'🎨',cat:'craft',age:4,gender:'any',mode:'exchange',value:1700,
+   area:'Ладожская',lat:59.9325,lng:30.4390,
+   want:'Кинетический песок или набор пластилина',desc:'Двусторонний: мел + маркер. Складной.',
+   owner:{n:'Дарья',a:'👩‍🎨',r:4.9,rc:13},reviews:[{a:'Света',s:5,t:'Мольберт супер, дочка рисует целыми днями'}]},
   {id:12,title:'Развивающий коврик',e:'🍼',cat:'baby',age:0,gender:'any',mode:'gift',value:0,
-   want:'',desc:'Отдаём даром. Дуги, погремушки, музыка. Постиран.',d:1.0,
+   area:'Пр. Ветеранов',lat:59.8380,lng:30.2520,
+   want:'',desc:'Отдаём даром. Дуги, погремушки, музыка. Постиран.',
    owner:{n:'Кристина',a:'👩‍🍼',r:4.8,rc:10},reviews:[]},
-  {id:13,title:'Настолка «Дженга»',e:'🎲',cat:'board',age:6,gender:'any',mode:'exchange',value:900,
-   want:'Любую настолку для компании',desc:'Полный комплект брусочков, коробка целая.',d:0.6,
+  {id:13,title:'Настольная игра «Падающая башня»',e:'🎲',cat:'board',age:6,gender:'any',mode:'exchange',value:900,
+   area:'Технологический ин-т',lat:59.9170,lng:30.3185,
+   want:'Любую настолку для компании',desc:'Полный комплект брусочков, коробка целая.',
    owner:{n:'Глеб',a:'👦',r:4.4,rc:4},reviews:[]},
-  {id:14,title:'Костюм Человека-паука',e:'🕷️',cat:'clothes',age:6,gender:'boy',mode:'exchange',value:1600,costume:true,
-   want:'Костюм динозавра или рыцаря, рост 122',desc:'Рост 116-122, маска в комплекте.',d:1.4,
+  {id:14,title:'Костюм рыцаря',e:'🛡️',cat:'clothes',age:6,gender:'boy',mode:'exchange',value:1600,costume:true,
+   area:'Пр. Большевиков',lat:59.9069,lng:30.4670,
+   want:'Костюм динозавра или пирата, рост 122',desc:'Рост 116–122, шлем и меч в комплекте.',
    owner:{n:'Роман',a:'👨‍🦲',r:4.6,rc:6},reviews:[]},
+  {id:15,title:'Кукольная коляска',e:'🛒',cat:'toys',age:4,gender:'girl',mode:'exchange',value:1900,
+   area:'Чкаловская',lat:59.9585,lng:30.2920,
+   want:'Кухня или набор посудки',desc:'Складная, колёса целые, ручка регулируется.',
+   owner:{n:'Светлана',a:'👩',r:4.9,rc:12},reviews:[{a:'Ксения',s:5,t:'Коляска отличная, спасибо!'}]},
+  {id:16,title:'Детская игровая кухня',e:'🍳',cat:'toys',age:4,gender:'any',mode:'box',value:2800,
+   area:'Колпино',lat:59.7500,lng:30.5990,
+   want:'Коробку игрушек на месяц или мастерскую',desc:'С плитой, мойкой и посудой. Меняемся на месяц.',
+   owner:{n:'Екатерина',a:'👩‍🦱',r:4.8,rc:15},reviews:[{a:'Анна',s:5,t:'Дочь не отходит от кухни'}]},
 ];
 
-/* Пожелания «ищу поиграть» */
+/* Пожелания «ищу поиграть» — тоже наши, по Санкт-Петербургу */
 let WISHES = [
   {id:101,e:'🦖',title:'Ищу: большой динозавр T-Rex',want:'Взамен предложу: набор железной дороги, мольберт или книги',
-   age:6,gender:'boy',d:0.8,owner:{n:'Лиза',a:'👩'}},
+   age:6,gender:'boy',area:'Купчино',lat:59.8330,lng:30.3850,owner:{n:'Лиза',a:'👩'}},
   {id:102,e:'🏰',title:'Ищу: кукольный домик',want:'Могу предложить много: коляску для кукол, кухню, набор посуды',
-   age:4,gender:'girl',d:1.2,owner:{n:'Аня',a:'👩‍🦰'}},
-  {id:103,e:'🚲',title:'Ищу: беговел на 2-3 года',want:'Взамен — самокат, каталка или конструктор крупные блоки',
-   age:2,gender:'any',d:0.5,owner:{n:'Тимур',a:'👨'}},
-  {id:104,e:'📦',title:'Ищу: коробку игрушек 5-7 лет на месяц',want:'Дам свою коробку: настолки, машинки, наборы для творчества',
-   age:6,gender:'any',d:1.7,owner:{n:'Вика',a:'👱‍♀️'}},
+   age:4,gender:'girl',area:'Васильевский остров',lat:59.9410,lng:30.2870,owner:{n:'Аня',a:'👩‍🦰'}},
+  {id:103,e:'🚲',title:'Ищу: беговел на 2–3 года',want:'Взамен — самокат, каталка или конструктор крупные блоки',
+   age:2,gender:'any',area:'Приморский р-н',lat:60.0050,lng:30.2700,owner:{n:'Тимур',a:'👨'}},
+  {id:104,e:'📦',title:'Ищу: коробку игрушек 5–7 лет на месяц',want:'Дам свою коробку: настолки, машинки, наборы для творчества',
+   age:6,gender:'any',area:'Московский р-н',lat:59.8550,lng:30.3180,owner:{n:'Вика',a:'👱‍♀️'}},
+  {id:105,e:'🛴',title:'Ищу: самокат на 4–5 лет',want:'Взамен — беговел, мольберт или развивающие книги',
+   age:4,gender:'any',area:'Академическая',lat:60.0150,lng:30.3900,owner:{n:'Олеся',a:'👩‍🦰'}},
 ];
 
 /* ============ Состояние ============ */
@@ -786,15 +811,28 @@ function userCenter(){
   const c = user&&CITY_CENTERS[user.cityKey];
   return c || CITY_CENTERS['Санкт-Петербург'];
 }
-/* раскидать лоты по расстоянию d (км) вокруг центра — детерминированно */
+/* координаты лота на карте: реальная точка по СПб; для созданных — рядом с пользователем */
 function lotLatLng(lot){
+  if(lot.lat&&lot.lng) return [lot.lat,lot.lng];
   const [clat,clng]=userCenter();
-  const ang=(lot.id*53)%360 * Math.PI/180;
-  const km=lot.d||1;
-  const dlat=(km/111)*Math.cos(ang);
-  const dlng=(km/(111*Math.cos(clat*Math.PI/180)))*Math.sin(ang);
-  return [clat+dlat, clng+dlng];
+  const ang=(lot.id*53)%360 * Math.PI/180, km=lot.d||1;
+  return [clat+(km/111)*Math.cos(ang), clng+(km/(111*Math.cos(clat*Math.PI/180)))*Math.sin(ang)];
 }
+/* честное расстояние от пользователя до лота (км) */
+function haversine(lat1,lng1,lat2,lng2){
+  const R=6371, toR=x=>x*Math.PI/180;
+  const dLat=toR(lat2-lat1), dLng=toR(lng2-lng1);
+  const s=Math.sin(dLat/2)**2+Math.cos(toR(lat1))*Math.cos(toR(lat2))*Math.sin(dLng/2)**2;
+  return 2*R*Math.asin(Math.sqrt(s));
+}
+function recomputeDistances(){
+  const [ulat,ulng]=userCenter();
+  [...LOTS,...WISHES].forEach(l=>{
+    if(l.lat&&l.lng) l.d=Math.max(0.1, haversine(ulat,ulng,l.lat,l.lng));
+    else if(l.d==null) l.d=0.2;
+  });
+}
+recomputeDistances();
 
 function palette(id){ return PALETTES[id % PALETTES.length]; }
 function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),2200); }
@@ -864,7 +902,7 @@ function renderDeck(){
       </div>
       <div class="info">
         <h3>${lot.title}</h3>
-        <div class="row"><span>${CATS.find(c=>c.k===lot.cat)?.e||''} ${catName(lot.cat)}</span>·<span>${genderE(lot.gender)} ${ageText(lot.age)}</span>·<span>${lot.owner.a} ${lot.owner.n} ⭐${lot.owner.r}</span></div>
+        <div class="row"><span>${CATS.find(c=>c.k===lot.cat)?.e||''} ${catName(lot.cat)}</span>·<span>${genderE(lot.gender)} ${ageText(lot.age)}</span>${lot.area?`·<span>📍 ${lot.area}</span>`:''}·<span>${lot.owner.a} ${lot.owner.n} ⭐${lot.owner.r}</span></div>
         ${lot.want?`<div class="want"><b>Хочет взамен:</b> ${lot.want}</div>`:`<div class="want"><b>${lot.mode==='gift'?'Отдаёт даром 🎁':'Готов(а) к равнозначному обмену'}</b></div>`}
       </div>`;
     if(top) enableSwipe(card);
@@ -946,7 +984,7 @@ function lotCard(lot){
       <div class="badges">${modeBadges(lot)}</div>${lotPicEmoji(lot)}</div>
     <div class="lot-body">
       <div class="lot-title">${lot.title}</div>
-      <div class="lot-meta"><span>📍 ${distText(lot.d)}</span>·<span>${genderE(lot.gender)} ${ageText(lot.age)}</span></div>
+      <div class="lot-meta"><span>📍 ${distText(lot.d)}${lot.area?' · '+lot.area:''}</span>·<span>${genderE(lot.gender)} ${ageText(lot.age)}</span></div>
       <div class="lot-owner"><span class="ava">${lot.owner.a}</span>${lot.owner.n}<span class="muted" style="margin-left:auto">⭐${lot.owner.r}</span></div>
     </div></div>`;
 }
@@ -969,7 +1007,7 @@ function renderWishes(){
       <div class="lot-body" style="flex:1">
         <div class="lot-title" style="-webkit-line-clamp:2;min-height:auto">${x.title}</div>
         <div style="font-size:12.5px;color:var(--ink);font-weight:700;margin:4px 0">💬 ${x.want}</div>
-        <div class="lot-meta"><span>${x.owner.a} ${x.owner.n}</span>·<span>📍 ${distText(x.d)}</span>·<span>${genderE(x.gender)} ${ageText(x.age)}</span></div>
+        <div class="lot-meta"><span>${x.owner.a} ${x.owner.n}</span>·<span>📍 ${distText(x.d)}${x.area?' · '+x.area:''}</span>·<span>${genderE(x.gender)} ${ageText(x.age)}</span></div>
       </div></div>`;
   }).join('');
 }
@@ -993,6 +1031,7 @@ function onLocationFound(e){
   user.lat=e.latlng.lat; user.lng=e.latlng.lng; store.user=user;
   if(userAccCircle) map.removeLayer(userAccCircle);
   userAccCircle=L.circle(e.latlng,{radius:Math.min(e.accuracy||300,2000),color:'#4CC2FF',weight:1.5,fillColor:'#4CC2FF',fillOpacity:.15}).addTo(map);
+  recomputeDistances();
   drawMarkers();
   document.getElementById('locText').textContent='Моё местоположение';
   toast('📍 Вы на карте!');
@@ -1017,13 +1056,13 @@ function drawMarkers(){
       const m=MODES[lot.mode];
       const col = lot.mode==='gift'?'#3DD68C':lot.mode==='rent'?'#A06CFF':lot.mode==='box'?'#FF9F45':'#4CC2FF';
       const mk=L.marker(lotLatLng(lot),{icon:colorPin(col,lot.e)}).addTo(markersLayer);
-      mk.bindPopup(`<div class="pop-t">${lot.title}</div><div class="pop-m">${m.e} ${m.t} · 📍 ${distText(lot.d)} · ${lot.owner.n}</div><button class="pop-b" onclick="openDetail(${lot.id})">Открыть лот</button>`);
+      mk.bindPopup(`<div class="pop-t">${lot.title}</div><div class="pop-m">${m.e} ${m.t} · 📍 ${distText(lot.d)}${lot.area?' · '+lot.area:''} · ${lot.owner.n}</div><button class="pop-b" onclick="openDetail(${lot.id})">Открыть лот</button>`);
     });
     sub.textContent=`🧸 ${LOTS.length} игрушек рядом · нажмите на метку`;
   } else {
     WISHES.forEach(x=>{
       const mk=L.marker(lotLatLng(x),{icon:colorPin('#FF5D73','🙋')}).addTo(markersLayer);
-      mk.bindPopup(`<div class="pop-t">${x.title}</div><div class="pop-m">${x.want}</div><div class="pop-m">${x.owner.a} ${x.owner.n} · 📍 ${distText(x.d)}</div>`);
+      mk.bindPopup(`<div class="pop-t">${x.title}</div><div class="pop-m">${x.want}</div><div class="pop-m">${x.owner.a} ${x.owner.n} · 📍 ${distText(x.d)}${x.area?' · '+x.area:''}</div>`);
     });
     sub.textContent=`🙋 ${WISHES.length} предложений «ищу поиграть» рядом`;
   }
@@ -1056,6 +1095,7 @@ function openDetail(id){
       <div class="value-tag">${valLine}</div>
       <span class="value-tag" style="margin-left:6px">${CATS.find(c=>c.k===lot.cat)?.e} ${catName(lot.cat)}</span>
       <span class="value-tag" style="margin-left:6px">${genderE(lot.gender)} ${ageText(lot.age)}</span>
+      ${lot.area?`<span class="value-tag" style="margin-left:6px">📍 ${lot.area}</span>`:''}
 
       <div class="owner-row">
         <span class="ava">${lot.owner.a}</span>
@@ -1188,7 +1228,8 @@ document.getElementById('cSubmit').onclick=()=>{
     cat:document.getElementById('cCat').value,
     age:+document.getElementById('cAge').value,
     gender:document.getElementById('cGender').value,
-    d:0.1, want:document.getElementById('cWant').value.trim(),
+    d:0.1, lat:userCenter()[0], lng:userCenter()[1], area:(user&&user.addr)?user.addr.split(',')[0]:'Рядом',
+    want:document.getElementById('cWant').value.trim(),
     desc:document.getElementById('cDesc').value.trim()||'Без описания',
     owner:{n:(user&&user.name)||'Вы',a:'🙂',r:5.0,rc:0}, reviews:[],
     img:createState.photos[0]||null, photos:createState.photos.slice(),
@@ -1231,7 +1272,7 @@ document.getElementById('editLoc').onclick=()=>changeLoc();
 document.getElementById('locChip').onclick=()=>changeLoc();
 function changeLoc(){
   const a=prompt('Ваша локация (город, район или адрес):', user?user.addr:'');
-  if(a&&a.trim()){ user.addr=a.trim(); detectCity(a); store.user=user; updateLocChip(); if(map){map.setView(userCenter(),13);drawMarkers();} toast('📍 Локация обновлена'); }
+  if(a&&a.trim()){ user.addr=a.trim(); detectCity(a); store.user=user; recomputeDistances(); updateLocChip(); if(map){map.setView(userCenter(),13);drawMarkers();} toast('📍 Локация обновлена'); }
 }
 function detectCity(addr){
   const low=addr.toLowerCase();
@@ -1271,6 +1312,7 @@ document.getElementById('onbSubmit').onclick=()=>{
 function startApp(){
   document.getElementById('onb').style.display='none';
   document.getElementById('app').style.display='flex';
+  recomputeDistances();
   updateLocChip();
   buildCreate(); renderChips(); syncCreate();
   nav('feed');
@@ -1283,7 +1325,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
   if(user){
     document.getElementById('onb').style.display='none';
     document.getElementById('app').style.display='flex';
-    updateLocChip(); buildCreate(); renderChips(); syncCreate(); nav('feed');
+    recomputeDistances(); updateLocChip(); buildCreate(); renderChips(); syncCreate(); nav('feed');
   } else {
     document.getElementById('app').style.display='none';
   }
