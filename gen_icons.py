@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Иконка «Давай Меняться» — реалистичная радужная ладонь (PWA / App Store / Google Play)."""
+"""Иконка «Давай Меняться» — изящная радужная ладонь с детскими искорками."""
 import os
 from PIL import Image, ImageDraw, ImageFilter, ImageChops
 
@@ -9,48 +9,49 @@ S = 1024
 
 def hex2rgb(h):
     h = h.lstrip('#'); return tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
+def lerp(a, b, t): return tuple(int(a[i] + (b[i]-a[i])*t) for i in range(3))
 
-# --- маска руки ---------------------------------------------------------------
+# transform из SVG-пространства (100) в пиксели
+k = 8.4
+cx, cy = 44.25, 52.0
+ox = S/2 - cx*k
+oy = S/2 - cy*k
+def X(x): return ox + x*k
+def Y(y): return oy + y*k
+
+# --- маска руки: изящные пальцы (стройнее, мягкий веер) ----------------------
 mask = Image.new('L', (S, S), 0)
-md = ImageDraw.Draw(mask)
-
 def add(layer):
     global mask
     mask = ImageChops.lighter(mask, layer)
 
-# ладонь + бугор у основания большого пальца (тенар) — даёт натуральную форму
 palm = Image.new('L', (S, S), 0); pd = ImageDraw.Draw(palm)
-pd.rounded_rectangle([372, 560, 652, 812], radius=112, fill=255)
-pd.ellipse([336, 648, 500, 824], fill=255)          # тенар (подушечка большого)
-pd.ellipse([360, 690, 660, 836], fill=255)          # округлая нижняя часть/запястье
+pd.rounded_rectangle([390, 582, 636, 792], radius=104, fill=255)   # ладонь, чистая округлая
+pd.ellipse([352, 656, 486, 800], fill=255)                          # подушечка большого пальца
 add(palm)
 
-# пальцы: основание у ладони, кончики веером (реалистичные пропорции)
 def finger(bx, by, length, width, angle):
     L = Image.new('L', (S, S), 0); d = ImageDraw.Draw(L)
-    d.rounded_rectangle([bx - width/2, by - length, bx + width/2, by + 36],
+    d.rounded_rectangle([bx - width/2, by - length, bx + width/2, by + 32],
                         radius=width/2, fill=255)
     L = L.rotate(angle, center=(bx, by), resample=Image.BICUBIC)
     add(L)
 
-#       bx   by   len  wid  angle(+ = наклон влево)
-finger(432, 600, 252, 66,  9)    # указательный
-finger(502, 600, 304, 70,  2)    # средний (самый длинный)
-finger(570, 600, 264, 64, -7)    # безымянный
-finger(628, 606, 198, 56, -17)   # мизинец (короче)
-# большой палец — от тенара вверх-влево
-finger(404, 732, 232, 86, 52)
+#       bx   by   len  wid  angle(+ = наклон влево)  — пальцы стройнее, веер мягче
+finger(442, 596, 262, 52,  8)    # указательный
+finger(506, 596, 312, 54,  2)    # средний
+finger(568, 596, 270, 50, -7)    # безымянный
+finger(624, 602, 206, 44, -16)   # мизинец
+finger(406, 728, 226, 74, 52)    # большой палец
 
-# --- яркая радужная заливка на всю ладонь (диагональ, в стиле Авито) ----------
+# --- яркая радужная заливка на всю ладонь (горизонталь) ----------------------
 bbox = mask.getbbox()
 x0, x1 = bbox[0] - 6, bbox[2] + 6
-y0, y1 = bbox[1] - 6, bbox[3] + 6
 stops = ['#FF2E63', '#FF7A00', '#FFC400', '#2BD576', '#12A9FF', '#8A4FFF']
-def lerp(a, b, t): return tuple(int(a[i] + (b[i]-a[i])*t) for i in range(3))
 N = 600
 lut = []
-for k in range(N):
-    tt = k/(N-1); sg = tt*(len(stops)-1); i = min(len(stops)-2, int(sg)); f = sg-i
+for kk in range(N):
+    tt = kk/(N-1); sg = tt*(len(stops)-1); i = min(len(stops)-2, int(sg)); f = sg-i
     lut.append(lerp(hex2rgb(stops[i]), hex2rgb(stops[i+1]), f))
 grad = Image.new('RGB', (S, S)); gp = grad.load()
 span = (x1 - x0)
@@ -62,41 +63,48 @@ for x in range(S):
         gp[x, y] = col
 hand = grad.convert('RGBA'); hand.putalpha(mask)
 
-# --- объём: верхний блик + нижняя тень внутри руки ---------------------------
+# --- мягкий объём (без «царапин») --------------------------------------------
 def soft(box, val, blur):
     g = Image.new('L', (S, S), 0); ImageDraw.Draw(g).ellipse(box, fill=val)
     return ImageChops.darker(g.filter(ImageFilter.GaussianBlur(blur)), mask)
-
-hl = Image.new('RGBA', (S, S), (255, 255, 255, 0)); hl.putalpha(soft([320, 300, 700, 640], 40, 75))
+hl = Image.new('RGBA', (S, S), (255, 255, 255, 0)); hl.putalpha(soft([330, 300, 700, 650], 46, 80))
 hand = Image.alpha_composite(hand, hl)
-sh = Image.new('RGBA', (S, S), (70, 25, 55, 0)); sh.putalpha(soft([330, 670, 700, 880], 66, 75))
+sh = Image.new('RGBA', (S, S), (70, 25, 55, 0)); sh.putalpha(soft([340, 680, 690, 880], 58, 80))
 hand = Image.alpha_composite(hand, sh)
 
-# тонкие тёмные «промежутки» между пальцами для читаемости
-sep = Image.new('RGBA', (S, S), (0, 0, 0, 0)); sd = ImageDraw.Draw(sep)
-for vx in (467, 536, 600):
-    sd.line([(vx, 500), (vx, 615)], fill=(80, 40, 50, 42), width=6)
-sep = sep.filter(ImageFilter.GaussianBlur(3))
-sep.putalpha(ImageChops.darker(sep.split()[3], mask))
-hand = Image.alpha_composite(hand, sep)
+# --- детские искорки-звёздочки (4 луча, белая сердцевина) ---------------------
+def sparkle(x, y, r, color, alpha=255):
+    layer = Image.new('RGBA', (S, S), (0, 0, 0, 0)); d = ImageDraw.Draw(layer)
+    i = r*0.16
+    pts = [(x, y-r),(x+i, y-i),(x+r, y),(x+i, y+i),(x, y+r),(x-i, y+i),(x-r, y),(x-i, y-i)]
+    d.polygon(pts, fill=color+(alpha,))
+    d.ellipse([x-r*0.22, y-r*0.22, x+r*0.22, y+r*0.22], fill=(255, 255, 255, 240))
+    glow = layer.filter(ImageFilter.GaussianBlur(6))
+    return Image.alpha_composite(glow, layer)
 
-# --- сохранить прозрачный логотип (обрезанный) -------------------------------
-crop = mask.getbbox(); pad = 24
-box = (crop[0]-pad, crop[1]-pad, crop[2]+pad, crop[3]+pad)
-hand.crop(box).save(os.path.join(OUT, "hand.png"))   # логотип без фона
+for (sx, sy, sr, sc) in [
+    (770, 300, 46, hex2rgb('#FFC400')),   # золотая, крупная — справа сверху
+    (286, 408, 33, hex2rgb('#FF2E63')),   # коралловая — слева у большого
+    (590, 150, 25, hex2rgb('#12A9FF')),   # голубая — над средним
+    (726, 560, 17, hex2rgb('#2BD576')),   # маленькая зелёная
+]:
+    hand = Image.alpha_composite(hand, sparkle(sx, sy, sr, sc))
+
+# --- прозрачный логотип (обрезка по всему содержимому, вкл. искорки) ----------
+crop = hand.split()[3].getbbox(); pad = 22
+box = (max(0, crop[0]-pad), max(0, crop[1]-pad), min(S, crop[2]+pad), min(S, crop[3]+pad))
+hand.crop(box).save(os.path.join(OUT, "hand.png"))
 
 # --- иконка с тёплым фоном (для лаунчера/PWA) --------------------------------
 def with_bg(size):
-    top, bot = hex2rgb('#FFF0D8'), hex2rgb('#FFD9E6')
+    top, bot = hex2rgb('#FFF0D8'), hex2rgb('#FFE0EA')
     bg = Image.new('RGB', (S, S)); bpx = bg.load()
     for yy in range(S):
         c = lerp(top, bot, yy/(S-1))
         for xx in range(S): bpx[xx, yy] = c
     bg = bg.convert('RGBA')
-    drop = Image.new('RGBA', (S, S), (0, 0, 0, 0)); drop.putalpha(mask)
-    sm = Image.new('RGBA', (S, S), (0, 0, 0, 0))
-    dd = Image.new('L', (S, S), 0); dd.paste(mask, (0, 26)); dd = dd.filter(ImageFilter.GaussianBlur(22))
-    shadow = Image.new('RGBA', (S, S), (110, 70, 50, 0)); shadow.putalpha(dd.point(lambda v: int(v*0.45)))
+    dd = Image.new('L', (S, S), 0); dd.paste(mask, (0, 24)); dd = dd.filter(ImageFilter.GaussianBlur(22))
+    shadow = Image.new('RGBA', (S, S), (110, 70, 50, 0)); shadow.putalpha(dd.point(lambda v: int(v*0.40)))
     bg = Image.alpha_composite(bg, shadow)
     bg = Image.alpha_composite(bg, hand)
     return bg.convert('RGB').resize((size, size), Image.LANCZOS)

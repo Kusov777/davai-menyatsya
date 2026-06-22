@@ -1,5 +1,5 @@
 /* Service worker «Давай Меняться» — офлайн-кэш + установка */
-const CACHE = 'davai-menyatsya-v2';
+const CACHE = 'davai-menyatsya-v3';
 const ASSETS = [
   './',
   './index.html',
